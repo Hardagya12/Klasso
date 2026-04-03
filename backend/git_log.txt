@@ -1,0 +1,5 @@
+b92ebe7  feat: add schema seed and config files
+391cfd2 configure Neon PostgreSQL connection with query helper and test function
+7313f57  created kawaii-themed UI component library
+2edd8c2 added decorative stationary elements and barrel export
+26c3046  added suite of kawaii mascots as React components
