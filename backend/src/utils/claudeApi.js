@@ -227,9 +227,25 @@ Provide feedback in this exact format:
   return callClaude(systemPrompt, userPrompt, 600);
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateMoodAlertMessage
+// ─────────────────────────────────────────────────────────────────────────────
+const generateMoodAlertMessage = async (pattern, days) => {
+  const systemPrompt = `You are an empathetic school counselor AI.
+Write a single gentle, non-alarmist 2-sentence private note to a teacher.
+Do not mention the student by name. Focus on observation, not diagnosis.
+Tone: caring colleague to colleague.`;
+
+  const userPrompt = `A student has shown ${pattern} in their mood check-ins over ${days} days.
+Please provide the 2-sentence note.`;
+
+  return callClaude(systemPrompt, userPrompt, 200);
+};
+
 module.exports = {
   generateStudentReport,
   generateLessonPlan,
   generateAIFeedback,
   chatStudentBuddy,
+  generateMoodAlertMessage,
 };
