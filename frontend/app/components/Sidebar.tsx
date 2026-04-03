@@ -70,6 +70,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
     { label: "Messages", path: "/teacher/messages", icon: <MessageDoodle size={20}/> },
     { label: "Students", path: "/teacher/students", icon: <PeopleDoodle size={20}/> },
     { label: "Quests", path: "/teacher/quests", icon: <QuestScrollDoodle size={20}/> },
+    { label: "Knowledge Duel", path: "/teacher/duel", icon: <LightbulbDoodle size={20}/> },
   ];
 
   const navItems = isAdmin ? adminNavItems : teacherNavItems;
