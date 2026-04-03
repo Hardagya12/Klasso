@@ -3,6 +3,7 @@
 const { query } = require('../db/neon');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { createNotificationsForMany } = require('../utils/notificationHelper');
+const questService = require('../utils/questService');
 
 // ─── GET /api/assignments ────────────────────────────────────────────────────
 const getAssignments = async (req, res, next) => {
@@ -157,6 +158,12 @@ const submitAssignment = async (req, res, next) => {
        RETURNING *`,
       [assignment_id, student_id, file_url, notes]
     );
+
+    // Check quest completions (submission trigger)
+    questService.checkQuestCompletions(student_id, 'submission').catch(e =>
+      console.error('[questService] submission trigger error:', e.message)
+    );
+
     return sendSuccess(res, result.rows[0], 'Assignment submitted', 201);
   } catch (err) { next(err); }
 };
