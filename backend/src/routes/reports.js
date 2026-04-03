@@ -4,15 +4,24 @@ const router = require('express').Router();
 const { authenticateJWT, authorizeRole } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const {
-  getStudentReport, getClassReport, getSavedReports, saveReport, approveReport,
+  generateReport, generateBulkReports,
+  getStudentReports, getReportById,
+  approveReport, updateReport, deleteReport,
 } = require('../controllers/reportController');
 
 router.use(authenticateJWT);
 
-router.get('/student/:studentId', getStudentReport);
-router.get('/class/:classId', authorizeRole('admin','teacher'), getClassReport);
-router.get('/saved', getSavedReports);
-router.post('/', authorizeRole('admin','teacher'), validateBody(['student_id','content']), saveReport);
-router.patch('/:id/approve', authorizeRole('admin'), approveReport);
+// Generate (static paths before /:id)
+router.post('/generate/:student_id',    authorizeRole('teacher', 'admin'), generateReport);
+router.post('/generate-bulk/:class_id', authorizeRole('teacher', 'admin'), generateBulkReports);
+
+// List for a student
+router.get('/student/:student_id', getStudentReports);
+
+// Single report
+router.get('/:id',            getReportById);
+router.put('/:id/approve',    authorizeRole('teacher', 'admin'), approveReport);
+router.put('/:id',            authorizeRole('teacher'),           validateBody(['content']), updateReport);
+router.delete('/:id',         authorizeRole('admin'),             deleteReport);
 
 module.exports = router;
