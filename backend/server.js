@@ -6,9 +6,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const http = require('http');
 
 const { testConnection } = require('./src/db/neon');
 const errorHandler = require('./src/middleware/errorHandler');
+const { setupSocketIO } = require('./src/socket');
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/auth');
@@ -34,6 +36,7 @@ const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
 const aiRoutes = require('./src/routes/ai');
 const questRoutes = require('./src/routes/quests');
+const duelRoutes = require('./src/routes/duels');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +59,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+const server = http.createServer(app);
+setupSocketIO(server, corsOrigins);
 
 // ── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -89,6 +95,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/streak', streakRoutes);
 app.use('/api/xp', xpRoutes);
 app.use('/api/quests', questRoutes);
+app.use('/api/duels', duelRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -101,9 +108,10 @@ app.use(errorHandler);
 // ── Start ──────────────────────────────────────────────────────────────────────
 const start = async () => {
   await testConnection();
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀  Klasso API running on http://localhost:${PORT}`);
     console.log(`📦  Environment: ${process.env.NODE_ENV}`);
+    console.log(`⚡  Socket.IO real-time enabled`);
   });
 };
 
