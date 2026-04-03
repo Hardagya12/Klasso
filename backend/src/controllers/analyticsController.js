@@ -67,8 +67,8 @@ const getAdminDashboard = async (req, res, next) => {
              FROM fee_payments fp
              JOIN students st ON st.id=fp.student_id
              WHERE st.school_id=$1
-               AND EXTRACT(MONTH FROM fp.paid_on)=EXTRACT(MONTH FROM NOW())
-               AND EXTRACT(YEAR FROM fp.paid_on)=EXTRACT(YEAR FROM NOW())`, [school_id]),
+               AND EXTRACT(MONTH FROM fp.payment_date)=EXTRACT(MONTH FROM NOW())
+               AND EXTRACT(YEAR FROM fp.payment_date)=EXTRACT(YEAR FROM NOW())`, [school_id]),
 
       // Recent announcements
       query(`SELECT id, title, audience, created_at FROM announcements
@@ -140,10 +140,10 @@ const getTeacherDashboard = async (req, res, next) => {
              FROM exams e JOIN classes c ON c.id=e.class_id
              JOIN class_subjects cs ON cs.class_id=c.id
              WHERE cs.teacher_id=$1
+             GROUP BY e.id, e.name, c.id, c.name
              HAVING (SELECT COUNT(*) FROM students WHERE class_id=c.id) >
                     (SELECT COUNT(DISTINCT m2.student_id) FROM marks m2
-                     JOIN exam_subjects es3 ON es3.id=m2.exam_subject_id WHERE es3.exam_id=e.id)
-             GROUP BY e.id, e.name, c.name`, [teacher_id]),
+                     JOIN exam_subjects es3 ON es3.id=m2.exam_subject_id WHERE es3.exam_id=e.id)`, [teacher_id]),
 
       // Ungraded assignment submissions
       query(`SELECT a.title, c.name AS class_name,
@@ -224,7 +224,12 @@ const getParentDashboard = async (req, res, next) => {
       ]);
 
       return {
-        student: { name: child.name, class: `${child.class_name} ${child.section}`, roll_no: child.roll_no },
+        student: {
+          id: child.id,
+          name: child.name,
+          class: `${child.class_name ?? ''} ${child.section ?? ''}`.trim(),
+          roll_no: child.roll_no,
+        },
         attendance: { percentage: parseFloat(attRes.rows[0]?.pct) || 0, days_absent_this_month: attRes.rows[0]?.absent_this_month || 0 },
         latest_marks: marksRes.rows[0] || null,
         pending_assignments: pendingRes.rows[0]?.count || 0,
@@ -243,9 +248,15 @@ const getParentDashboard = async (req, res, next) => {
 const getStudentDashboard = async (req, res, next) => {
   try {
     const user_id = req.user.id;
-    const stuRes = await query('SELECT id, class_id, roll_no FROM students WHERE user_id=$1', [user_id]);
+    const stuRes = await query(
+      `SELECT st.id, st.class_id, st.roll_no, c.name AS class_name, c.section
+       FROM students st
+       LEFT JOIN classes c ON c.id = st.class_id
+       WHERE st.user_id=$1`,
+      [user_id]
+    );
     if (!stuRes.rows.length) return sendError(res, 'Student record not found', 404);
-    const { id: student_id, class_id, roll_no } = stuRes.rows[0];
+    const { id: student_id, class_id, roll_no, class_name, section } = stuRes.rows[0];
 
     const jsDay = new Date().getDay();
     const todayDbDay = jsDay === 0 ? null : jsDay;
@@ -298,7 +309,13 @@ const getStudentDashboard = async (req, res, next) => {
     ]);
 
     return sendSuccess(res, {
-      student         : { name: req.user.name, class: class_id, roll_no },
+      student         : {
+        name: req.user.name,
+        class_id,
+        class_name: class_name || null,
+        section: section || null,
+        roll_no,
+      },
       attendance      : { percentage: parseFloat(attRes.rows[0]?.pct)||0, this_month: attMonthRes.rows[0]||{present:0,absent:0} },
       marks           : { latest_exam: marksRes.rows[0]||null },
       today_timetable : timetableRes.rows,
