@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   KLASSO DESIGN SYSTEM — Kawaii Stationery Shop
+   Hyper-cute · Pastel chaos · Japanese stationery
+   ───────────────────────────────────────────── */
+
+@theme inline {
+  /* ── Pastel Color Palette ── */
+  --color-primary:        #FFB5C8;
+  --color-primary-light:  #FFE0EA;
+  --color-primary-dark:   #E88FA7;
+
+  --color-secondary:      #A8E6CF;
+  --color-secondary-light:#D4F5E6;
+  --color-secondary-dark: #7BCBA5;
+
+  --color-accent:         #C8B6FF;
+  --color-accent-light:   #E8DEFF;
+  --color-accent-dark:    #A48FE0;
+
+  --color-butter:         #FFEAA7;
+  --color-butter-light:   #FFF5D0;
+  --color-butter-dark:    #E6CF7A;
+
+  --color-sky:            #B8E8FC;
+  --color-sky-light:      #DFF4FE;
+  --color-sky-dark:       #8BD0F0;
+
+  --color-peach:          #FFCBA4;
+  --color-peach-light:    #FFE8D6;
+  --color-peach-dark:     #E5A87A;
+
+  --color-background:     #FFF5F7;
+  --color-surface:        #FFFFFF;
+  --color-text:           #4A4458;
+  --color-text-muted:     #9B95A8;
+  --color-border:         #F0E6EF;
+  --color-border-dark:    #D4C8D3;
+
+  --color-success:        #A8E6CF;
+  --color-warning:        #FFEAA7;
+  --color-danger:         #FFB5C8;
+
+  /* ── Typography ── */
+  --font-heading:  "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-body:     "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-accent:   "Caveat", cursive;
+
+  /* ── Radii ── */
+  --radius-sm:   12px;
+  --radius-md:   16px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-full: 9999px;
+
+  /* ── Kawaii Shadows — soft & pillowy ── */
+  --shadow-kawaii:     0 4px 16px rgba(255, 181, 200, 0.25);
+  --shadow-kawaii-lg:  0 8px 32px rgba(255, 181, 200, 0.3);
+  --shadow-mint:      0 4px 16px rgba(168, 230, 207, 0.3);
+  --shadow-lavender:  0 4px 16px rgba(200, 182, 255, 0.3);
+  --shadow-butter:    0 4px 16px rgba(255, 234, 167, 0.3);
+  --shadow-soft:      0 2px 12px rgba(74,68,88,0.06);
+}
+
+/* ── Base Styles ── */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-text);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-background); }
+::-webkit-scrollbar-thumb { background: var(--color-primary-light); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+/* ── Kawaii Animations ── */
+@keyframes kawaii-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes kawaii-wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes kawaii-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(1deg); }
+  75% { transform: translateY(-2px) rotate(-1deg); }
+}
+@keyframes kawaii-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes kawaii-sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+@keyframes kawaii-blink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+@keyframes kawaii-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes washi-slide {
+  from { transform: translateX(-10px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-kawaii-bounce { animation: kawaii-bounce 2s ease-in-out infinite; }
+.animate-kawaii-wiggle { animation: kawaii-wiggle 2.5s ease-in-out infinite; }
+.animate-kawaii-float  { animation: kawaii-float 3s ease-in-out infinite; }
+.animate-kawaii-pop    { animation: kawaii-pop 0.4s ease-out forwards; }
+.animate-kawaii-sparkle { animation: kawaii-sparkle 1.5s ease-in-out infinite; }
+.animate-kawaii-blink  { animation: kawaii-blink 4s ease-in-out infinite; transform-origin: center; }
+.animate-kawaii-spin   { animation: kawaii-spin 6s linear infinite; }
+.animate-washi-slide   { animation: washi-slide 0.5s ease-out forwards; }
+
+/* ── Font Utilities ── */
+.font-accent  { font-family: var(--font-accent); }
+.font-heading { font-family: var(--font-heading); }
+.font-body    { font-family: var(--font-body); }
+
+/* ── Kawaii dot pattern background ── */
+.bg-dots {
+  background-image: radial-gradient(circle, #F0E6EF 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ── Washi tape look ── */
+.washi-tape {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,0.15) 10px,
+    rgba(255,255,255,0.15) 20px
+  );
+}
