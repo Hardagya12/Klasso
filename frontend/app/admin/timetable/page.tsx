@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "../../components/Sidebar";
+import AdminSidebar from "../../components/ui/AdminSidebar";
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES
@@ -187,7 +187,7 @@ export default function TimetableBuilderPage() {
       <MidCenturyCornerAccent />
 
       {/* ── SIDEBAR ── */}
-      <Sidebar />
+      <AdminSidebar />
       
       {/* ── MAIN CONTENT ── */}
       <div className="flex-1 flex flex-col min-w-0 z-10 relative ml-[240px]">
