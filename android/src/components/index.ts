@@ -8,6 +8,10 @@ export { KlassoBadge } from './KlassoBadge';
 export { KlassoAvatar } from './KlassoAvatar';
 export { StatCard } from './StatCard';
 export { KlassoScreen } from './KlassoScreen';
+export { KlassoTabBar } from './KlassoTabBar';
+export * from './EmptyStates';
+export * from './LoadingStates';
+export * from './MicroInteractions';
 
 // Doodle SVG components
 export {
@@ -29,6 +33,9 @@ export {
   DoodleDiamond,
   DoodleCircleDot,
   DoodleStarburst,
+  DoodleCloudHouse,
+  DoodleSpeechBubble,
+  DoodleZzz,
 } from './doodles/index';
 
 // Theme tokens
