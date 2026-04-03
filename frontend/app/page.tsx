@@ -87,9 +87,9 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-wrap gap-3 mb-4">
-            <Link href="/teacher">
+            <Link href="/login">
               <KawaiiButton variant="pink" size="lg">
-                <KawaiiPencil size={20} /> Start Now
+                <KawaiiPencil size={20} /> Sign in
               </KawaiiButton>
             </Link>
             <KawaiiButton variant="mint" size="lg">

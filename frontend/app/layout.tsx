@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito, DM_Sans, Caveat } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "./providers";
 
 const nunito = Nunito({
   variable: "--font-heading",
@@ -40,7 +41,7 @@ export default function RootLayout({
       className={`${nunito.variable} ${dmSans.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
