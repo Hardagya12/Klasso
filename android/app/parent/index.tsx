@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Animated, Pressable,
+  Animated, Pressable, ActivityIndicator
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,33 +13,7 @@ import {
   DoodleArrow, DoodleRuler, DoodleWave, DoodleFlower,
   Colors, Fonts, retroShadow, Radius,
 } from '@/src/components';
-
-// ─── Mock Data ─────────────────────────────────────────────────────────────
-const CHILDREN = [
-  { id: '1', name: 'Arjun Mehta', class: 'Class 9', section: 'A', active: true },
-  { id: '2', name: 'Priya Mehta', class: 'Class 6', section: 'B', active: false },
-];
-
-const ALERTS = [
-  { id: '1', text: 'Arjun was marked absent · Period 3 — Science' },
-];
-
-const SCHEDULE = [
-  { time: '08:00 AM', subject: 'English', teacher: 'Mrs. D\'Souza', status: 'done' },
-  { time: '09:00 AM', subject: 'Mathematics', teacher: 'Mr. Sharma', status: 'done' },
-  { time: '10:15 AM', subject: 'Science', teacher: 'Ms. Kapoor', status: 'current' },
-  { time: '11:30 AM', subject: 'History', teacher: 'Mr. Verma', status: 'upcoming' },
-  { time: '12:30 PM', subject: 'Lunch Break', teacher: '', status: 'upcoming' },
-  { time: '01:15 PM', subject: 'PE', teacher: 'Coach Rajan', status: 'upcoming' },
-];
-
-const ACTIVITY = [
-  { id: '1', type: 'grade', dot: Colors.purple, text: 'Math test result posted — 87/100', time: '2h ago' },
-  { id: '2', type: 'attendance', dot: Colors.coral, text: 'Absent marked in Period 3 Science', time: '3h ago' },
-  { id: '3', type: 'homework', dot: Colors.yellow, text: 'New homework: History Essay due Fri', time: '5h ago' },
-  { id: '4', type: 'message', dot: Colors.mint, text: 'Mrs. D\'Souza sent you a message', time: '1d ago' },
-  { id: '5', type: 'grade', dot: Colors.purple, text: 'English project graded — A+', time: '2d ago' },
-];
+import { apiData } from '@/lib/api';
 
 // ─── Notification Bell ─────────────────────────────────────────────────────
 const NotifBell = () => (
@@ -62,7 +36,7 @@ const NotifBell = () => (
 // ─── Child Switcher Pill ────────────────────────────────────────────────────
 const ChildPill = ({
   child, active, onPress,
-}: { child: typeof CHILDREN[0]; active: boolean; onPress: () => void }) => (
+}: { child: any; active: boolean; onPress: () => void }) => (
   <TouchableOpacity
     onPress={onPress}
     style={[
@@ -76,10 +50,10 @@ const ChildPill = ({
     <KlassoAvatar name={child.name} size={30} />
     <View style={{ marginLeft: 4 }}>
       <Text style={[styles.pillName, { color: active ? Colors.textPrimary : Colors.textMuted }]}>
-        {child.name.split(' ')[0]}
+        {child.name?.split(' ')[0]}
       </Text>
       <Text style={[styles.pillClass, { color: active ? Colors.textPrimary : Colors.textLight }]}>
-        {child.class} · {child.section}
+        {child.class}
       </Text>
     </View>
   </TouchableOpacity>
@@ -134,7 +108,7 @@ const QuickCard = ({
 };
 
 // ─── Schedule Node ─────────────────────────────────────────────────────────
-const ScheduleNode = ({ item, isLast }: { item: typeof SCHEDULE[0]; isLast: boolean }) => {
+const ScheduleNode = ({ item, isLast }: { item: any; isLast: boolean }) => {
   const isDone = item.status === 'done';
   const isCurrent = item.status === 'current';
 
@@ -172,7 +146,7 @@ const ScheduleNode = ({ item, isLast }: { item: typeof SCHEDULE[0]; isLast: bool
 };
 
 // ─── Activity Item ─────────────────────────────────────────────────────────
-const ActivityItem = ({ item }: { item: typeof ACTIVITY[0] }) => {
+const ActivityItem = ({ item }: { item: any }) => {
   const DoodleIcon = item.type === 'grade'
     ? DoodleStar
     : item.type === 'attendance'
@@ -193,16 +167,52 @@ const ActivityItem = ({ item }: { item: typeof ACTIVITY[0] }) => {
 // ─── MAIN SCREEN ───────────────────────────────────────────────────────────
 export default function ParentHome() {
   const insets = useSafeAreaInsets();
-  const [activeChild, setActiveChild] = useState('1');
-  const child = CHILDREN.find(c => c.id === activeChild) ?? CHILDREN[0];
+  const [activeChildId, setActiveChildId] = useState<string | number | null>(null);
+  const [data, setData] = useState<{ children: any[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiData<{ children: any[] }>('/api/analytics/parent')
+      .then(res => {
+        setData(res);
+        if (res.children?.length > 0) setActiveChildId(res.children[0].student.id);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.mint} />
+      </View>
+    );
+  }
+
+  const activeNode = data.children.find(c => c.student.id === activeChildId) ?? data.children[0];
+  if (!activeNode) return null;
+
+  const child = activeNode.student;
+  const attendance = activeNode.attendance;
+  const latestGrade = activeNode.latest_marks?.grade ?? '-';
+  const pendingAssignments = activeNode.pending_assignments;
+
+  const scheduleParams = [
+    { time: '08:00 AM', subject: 'English', teacher: 'Teacher', status: 'done' },
+    { time: '09:00 AM', subject: 'Mathematics', teacher: 'Teacher', status: 'done' },
+    { time: '10:15 AM', subject: 'Science', teacher: 'Teacher', status: 'current' },
+  ];
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* ── HEADER ── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerGreeting}>Hello, Mrs. Mehta 👋</Text>
-          <Text style={styles.headerDate}>Thursday, 3rd April</Text>
+          <Text style={styles.headerGreeting}>Hello, Parent 👋</Text>
+          <Text style={styles.headerDate}>{new Date().toDateString()}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <TouchableOpacity onPress={() => router.push('/parent/notifications' as any)}>
@@ -224,12 +234,12 @@ export default function ParentHome() {
             <DoodleWave size={18} color={Colors.coral} />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcherScroll}>
-            {CHILDREN.map(c => (
+            {data.children.map(c => (
               <ChildPill
-                key={c.id}
-                child={c}
-                active={c.id === activeChild}
-                onPress={() => setActiveChild(c.id)}
+                key={c.student.id}
+                child={c.student}
+                active={c.student.id === activeChildId}
+                onPress={() => setActiveChildId(c.student.id)}
               />
             ))}
           </ScrollView>
@@ -238,7 +248,7 @@ export default function ParentHome() {
         {/* ── CHILD SNAPSHOT HERO CARD ── */}
         <TouchableOpacity
           activeOpacity={0.93}
-          onPress={() => router.push('/parent/child-overview' as any)}
+          onPress={() => router.push({ pathname: '/parent/child-overview', params: { childId: child.id } } as any)}
           style={[styles.heroCard, retroShadow(5, 5, Colors.shadow)]}
         >
           {/* BG starburst */}
@@ -251,16 +261,15 @@ export default function ParentHome() {
             <Text style={styles.heroChildName}>{child.name}</Text>
             <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
               <KlassoBadge label={child.class} color="mint" />
-              <KlassoBadge label={`Sec ${child.section}`} color="gray" />
             </View>
-            <Text style={styles.heroLastSeen}>Last seen in school: Today 9:03 AM</Text>
+            <Text style={styles.heroLastSeen}>Last seen in school: Today</Text>
           </View>
 
           {/* Right column — mini stats */}
           <View style={styles.heroRight}>
-            <MiniStat icon={<DoodleCheckCircle size={16} color={Colors.mint} />} value="94%" label="Attendance" />
-            <MiniStat icon={<DoodleStar size={16} color={Colors.purple} />} value="A-" label="Avg Grade" />
-            <MiniStat icon={<DoodleBook size={16} color={Colors.coral} />} value="3 due" label="Assignments" />
+            <MiniStat icon={<DoodleCheckCircle size={16} color={Colors.mint} />} value={`${attendance.percentage}%`} label="Attendance" />
+            <MiniStat icon={<DoodleStar size={16} color={Colors.purple} />} value={latestGrade} label="Latest Grade" />
+            <MiniStat icon={<DoodleBook size={16} color={Colors.coral} />} value={`${pendingAssignments} due`} label="Assignments" />
           </View>
 
           {/* Coral bottom strip */}
@@ -272,15 +281,15 @@ export default function ParentHome() {
         </TouchableOpacity>
 
         {/* ── ALERTS ── */}
-        {ALERTS.map(alert => (
-          <View key={alert.id} style={[styles.alertCard, retroShadow(4, 4, Colors.coralDark)]}>
+        {attendance.days_absent_this_month > 0 && (
+          <View style={[styles.alertCard, retroShadow(4, 4, Colors.coralDark)]}>
             <View style={styles.alertLeft}>
               <DoodleSparkle size={22} color={Colors.coral} />
-              <Text style={styles.alertText}>{alert.text}</Text>
+              <Text style={styles.alertText}>{child.name?.split(' ')[0]} was absent {attendance.days_absent_this_month} time(s) this month</Text>
             </View>
             <KlassoButton label="Contact School" variant="ghost" size="sm" style={{ borderColor: 'rgba(255,255,255,0.6)' }} />
           </View>
-        ))}
+        )}
 
         {/* ── TODAY'S SCHEDULE ── */}
         <View style={styles.sectionHeader}>
@@ -288,8 +297,8 @@ export default function ParentHome() {
           <Text style={styles.sectionTitle}>Arjun's Day Today</Text>
         </View>
         <View style={[styles.scheduleCard, retroShadow(3, 3, Colors.shadow)]}>
-          {SCHEDULE.map((item, idx) => (
-            <ScheduleNode key={idx} item={item} isLast={idx === SCHEDULE.length - 1} />
+          {scheduleParams.map((item, idx) => (
+            <ScheduleNode key={idx} item={item} isLast={idx === scheduleParams.length - 1} />
           ))}
         </View>
 
@@ -301,22 +310,22 @@ export default function ParentHome() {
           <QuickCard
             icon={<DoodleBook size={30} color={Colors.coral} />}
             label="View Grades"
-            onPress={() => router.push('/parent/child-overview' as any)}
+            onPress={() => router.push({ pathname: '/parent/child-overview', params: { childId: child.id } } as any)}
           />
           <QuickCard
             icon={<DoodleCheckCircle size={30} color={Colors.mint} />}
             label="Attendance"
-            onPress={() => router.push('/parent/child-overview' as any)}
+            onPress={() => router.push({ pathname: '/parent/child-overview', params: { childId: child.id } } as any)}
           />
           <QuickCard
             icon={<DoodleFlower size={30} color={Colors.purple} />}
             label="Message Teacher"
-            onPress={() => router.push('/parent/child-overview' as any)}
+            onPress={() => router.push({ pathname: '/parent/child-overview', params: { childId: child.id } } as any)}
           />
           <QuickCard
             icon={<DoodleLightbulb size={30} color={Colors.yellow} />}
             label="AI Reports"
-            onPress={() => router.push('/parent/child-overview' as any)}
+            onPress={() => router.push({ pathname: '/parent/child-overview', params: { childId: child.id } } as any)}
           />
         </View>
 
@@ -326,15 +335,17 @@ export default function ParentHome() {
           <DoodleArrow size={20} color={Colors.textMuted} />
         </View>
         <View style={[styles.activityCard, retroShadow(3, 3, Colors.shadow)]}>
-          {ACTIVITY.map(item => (
-            <ActivityItem key={item.id} item={item} />
-          ))}
+          {activeNode.recent_notifications?.length > 0 ? activeNode.recent_notifications.map((item: any, idx: number) => (
+            <ActivityItem key={idx} item={{ type: 'message', dot: Colors.mint, text: item.title, time: new Date(item.created_at).toLocaleDateString() }} />
+          )) : (
+            <Text style={{ fontFamily: Fonts.body, fontSize: 13, color: Colors.textMuted }}>No recent updates.</Text>
+          )}
         </View>
 
         {/* ── BOTTOM QUICK LINKS ── */}
         <View style={styles.bottomLinks}>
           <TouchableOpacity
-            onPress={() => router.push('/parent/fees' as any)}
+            onPress={() => router.push({ pathname: '/parent/fees', params: { childId: child.id } } as any)}
             style={styles.bottomLink}
             activeOpacity={0.8}
           >
