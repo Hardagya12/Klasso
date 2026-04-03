@@ -113,7 +113,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
           const isActive = pathname === item.path;
           return (
             <Link key={item.path} href={item.path} title={collapsed ? item.label : undefined} style={{
-              display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: "12px",
+              display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", gap: "12px",
               padding: collapsed ? "10px 0" : "10px 16px", borderRadius: "12px", cursor: "pointer",
               border: isActive ? "2px solid #F5A623" : "2px solid transparent",
               backgroundColor: isActive ? "#FEF3DC" : "transparent",
@@ -123,12 +123,21 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
               margin: collapsed ? "0 auto" : "0",
               width: collapsed ? "44px" : "100%",
             }}>
-              <span style={{ color: isActive ? "#F5A623" : "#7A7670", display: "flex" }}>{item.icon}</span>
-              {!collapsed && (
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ color: isActive ? "#F5A623" : "#7A7670", display: "flex" }}>{item.icon}</span>
+                {!collapsed && (
+                  <span style={{
+                    fontFamily: '"Nunito", sans-serif', fontWeight: 700,
+                    color: isActive ? "#2C2A24" : "#7A7670", fontSize: "14px",
+                  }}>{item.label}</span>
+                )}
+              </div>
+              {!collapsed && item.label === "Messages" && (
                 <span style={{
-                  fontFamily: '"Nunito", sans-serif', fontWeight: 700,
-                  color: isActive ? "#2C2A24" : "#7A7670", fontSize: "14px",
-                }}>{item.label}</span>
+                  backgroundColor: "#E8534A", color: "white", borderRadius: "999px",
+                  padding: "2px 6px", fontSize: "10px", fontWeight: 900, fontFamily: '"Nunito", sans-serif',
+                  boxShadow: "1px 1px 0px #2C2A24", border: "1px solid #2C2A24"
+                }}>3</span>
               )}
             </Link>
           );
