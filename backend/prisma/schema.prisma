@@ -117,6 +117,7 @@ model Class {
   exams               Exam[]
   timetableSlots      TimetableSlot[]
   announcements       Announcement[]
+  classXP             ClassXP?
 
   @@unique([schoolId, academicYearId, name, section])
   @@map("classes")
@@ -145,6 +146,8 @@ model Student {
   assignmentSubmissions AssignmentSubmission[]
   feePayments        FeePayment[]
   documents          Document[]
+  streak             AttendanceStreak?
+  studentBadges      StudentBadge[]
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -562,4 +565,112 @@ model Document {
   generator User?   @relation("DocumentGeneratedBy", fields: [generatedBy], references: [id])
 
   @@map("documents")
+}
+
+// ── Gamification: Attendance Streaks & Badges ─────────────────────────────────
+
+enum BadgeType {
+  STREAK
+  PERFORMANCE
+  SUBMISSION
+  SPECIAL
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model AttendanceStreak {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String    @unique @map("student_id") @db.Uuid
+  currentStreak   Int       @default(0) @map("current_streak")
+  longestStreak   Int       @default(0) @map("longest_streak")
+  lastPresentDate DateTime? @map("last_present_date") @db.Date
+  totalPresentDays Int      @default(0) @map("total_present_days")
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_streaks")
+}
+
+model Badge {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(80)
+  description String
+  type        BadgeType @default(STREAK)
+  threshold   Int       @default(0)
+  iconName    String    @map("icon_name") @db.VarChar(60)
+  color       String    @db.VarChar(10)
+  rarity      Rarity    @default(COMMON)
+
+  studentBadges StudentBadge[]
+
+  @@map("badges")
+}
+
+model StudentBadge {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  badgeId   String   @map("badge_id") @db.Uuid
+  earnedAt  DateTime @default(now()) @map("earned_at") @db.Timestamptz(6)
+  isNew     Boolean  @default(true) @map("is_new")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge   Badge   @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeId])
+  @@index([studentId], map: "idx_student_badges_student")
+  @@map("student_badges")
+}
+
+// ──────────────────────────────────────────────────────────
+// Class XP (Collective Gamification)
+// ──────────────────────────────────────────────────────────
+
+model ClassXP {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId       String    @unique @map("class_id") @db.Uuid
+  totalXP       Int       @default(0) @map("total_xp")
+  currentLevel  Int       @default(1) @map("current_level")
+  currentTitle  String    @default("Seedlings") @map("current_title") @db.VarChar(50)
+  xpToNextLevel Int       @default(500) @map("xp_to_next_level")
+  weeklyXP      Int       @default(0) @map("weekly_xp")
+  weekStartDate DateTime  @map("week_start_date") @db.Date
+  
+  class         Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  events        XPEvent[]
+
+  @@map("class_xp")
+}
+
+model XPEvent {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classXpId   String      @map("class_xp_id") @db.Uuid
+  type        XPEventType
+  xpEarned    Int         @map("xp_earned")
+  description String
+  triggeredBy String?     @map("triggered_by") @db.Uuid // Can be user ID
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  classXP     ClassXP     @relation(fields: [classXpId], references: [id], onDelete: Cascade)
+
+  @@index([classXpId], map: "idx_xp_events_class_xp")
+  @@map("xp_events")
+}
+
+enum XPEventType {
+  FULL_ATTENDANCE_DAY
+  HIGH_ATTENDANCE_DAY
+  ALL_HOMEWORK_SUBMITTED
+  HIGH_SUBMISSION_RATE
+  CLASS_TEST_AVG_ABOVE_80
+  CLASS_TEST_AVG_ABOVE_70
+  ZERO_LATE_SUBMISSIONS
+  LEVEL_UP_BONUS
+  TEACHER_BONUS
+  STREAK_MILESTONE
 }
