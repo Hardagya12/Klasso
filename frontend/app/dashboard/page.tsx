@@ -26,7 +26,7 @@ export default function TeacherDashboard() {
       <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
 
       {/* ─── MAIN AREA ─── */}
-      <main style={{ flex: 1, marginLeft: 240, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, marginLeft: 210, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <header style={{
           height: 64, borderBottom: "2px solid #E8E4D9", backgroundColor: "#FFFFFF",
@@ -74,7 +74,7 @@ export default function TeacherDashboard() {
         </header>
 
         {/* Page content */}
-        <div style={{ padding: 32 }}>
+        <div style={{ padding: "32px 24px" }}>
 
           {/* ── STAT CARDS ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 48, position: "relative" }}>

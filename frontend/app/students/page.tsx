@@ -49,7 +49,7 @@ export default function StudentsPage() {
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 ml-[240px] pl-10 pr-8 py-10 max-w-none relative">
+      <main className="flex-1 ml-[210px] pl-6 pr-8 py-10 max-w-none relative">
         {/* Header Section */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div className="flex items-center gap-4">

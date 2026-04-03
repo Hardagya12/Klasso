@@ -111,8 +111,8 @@ const NavItem = ({ icon, label, path }: { icon: React.ReactNode, label: string, 
 
 export default function AdminSidebar() {
   return (
-    <aside className="w-[240px] shrink-0 border-r-2 border-[#E8E4D9] bg-white flex flex-col z-20 shadow-[2px_0_10px_rgba(0,0,0,0.03)] h-full overflow-y-auto custom-scrollbar">
-      <div className="p-6 border-b-2 border-[#E8E4D9] flex flex-col items-center mt-2">
+    <aside className="fixed top-0 left-0 w-[210px] h-screen border-r-2 border-[#E8E4D9] bg-white flex flex-col z-20 shadow-[2px_0_10px_rgba(0,0,0,0.03)] overflow-y-auto custom-scrollbar">
+      <div className="p-5 border-b-2 border-[#E8E4D9] flex flex-col items-center mt-2">
         <KlassoLogo size={48} />
         <span className="mt-2 text-[#4A90D9] font-bold tracking-wider" style={{ fontFamily: '"Caveat", cursive', fontSize: "20px" }}>Admin Panel</span>
       </div>
