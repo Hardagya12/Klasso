@@ -74,6 +74,7 @@ model User {
   eventsCreated              Event[]              @relation("EventCreatedBy")
   documentsGenerated         Document[]           @relation("DocumentGeneratedBy")
   questsCreated              Quest[]              @relation("QuestTeacher")
+  duelsCreated               Duel[]               @relation("DuelTeacher")
 
   @@index([schoolId], map: "idx_users_school")
   @@index([role], map: "idx_users_role")
@@ -120,6 +121,7 @@ model Class {
   announcements       Announcement[]
   classXP             ClassXP?
   quests              Quest[]
+  duels               Duel[]
 
   @@unique([schoolId, academicYearId, name, section])
   @@map("classes")
@@ -152,6 +154,7 @@ model Student {
   studentBadges      StudentBadge[]
   quests             Quest[]            @relation("QuestStudent")
   questCompletions   QuestCompletion[]
+  duelSessions       DuelSession[]
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -730,4 +733,83 @@ model QuestCompletion {
   @@unique([questId, studentId])
   @@index([studentId], map: "idx_quest_completions_student")
   @@map("quest_completions")
+}
+
+// ── Knowledge Duel (Real-time Quiz) ──────────────────────────────────────────
+
+enum DuelStatus {
+  WAITING
+  ACTIVE
+  QUESTION_ACTIVE
+  SHOWING_RESULTS
+  ENDED
+}
+
+model Duel {
+  id          String     @id @default(cuid())
+  classId     String     @map("class_id") @db.Uuid
+  subjectId   String?    @map("subject_id") @db.Uuid
+  teacherId   String     @map("teacher_id") @db.Uuid
+  title       String     @db.VarChar(255)
+  status      DuelStatus @default(WAITING)
+  currentQ    Int        @default(0) @map("current_q")
+  startedAt   DateTime?  @map("started_at") @db.Timestamptz(6)
+  endedAt     DateTime?  @map("ended_at") @db.Timestamptz(6)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  class       Class         @relation(fields:[classId], references:[id], onDelete: Cascade)
+  teacher     User          @relation("DuelTeacher", fields:[teacherId], references:[id], onDelete: Cascade)
+  questions   DuelQuestion[]
+  sessions    DuelSession[]
+
+  @@index([classId], map: "idx_duels_class")
+  @@index([teacherId], map: "idx_duels_teacher")
+  @@map("duels")
+}
+
+model DuelQuestion {
+  id            String   @id @default(cuid())
+  duelId        String   @map("duel_id")
+  order         Int
+  questionText  String   @map("question_text")
+  options       Json
+  correctIndex  Int      @map("correct_index")
+  timeLimit     Int      @default(30) @map("time_limit")
+  points        Int      @default(10)
+  
+  duel          Duel         @relation(fields:[duelId], references:[id], onDelete: Cascade)
+  answers       DuelAnswer[]
+
+  @@map("duel_questions")
+}
+
+model DuelSession {
+  id        String   @id @default(cuid())
+  duelId    String   @map("duel_id")
+  studentId String   @map("student_id") @db.Uuid
+  totalScore Int     @default(0) @map("total_score")
+  rank      Int?
+
+  duel      Duel           @relation(fields:[duelId], references:[id], onDelete: Cascade)
+  student   Student        @relation(fields:[studentId], references:[id], onDelete: Cascade)
+  answers   DuelAnswer[]
+
+  @@unique([duelId, studentId])
+  @@map("duel_sessions")
+}
+
+model DuelAnswer {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  questionId  String   @map("question_id")
+  answerIndex Int      @map("answer_index")
+  isCorrect   Boolean  @map("is_correct")
+  timeToAnswer Float   @map("time_to_answer")
+  pointsEarned Int     @default(0) @map("points_earned")
+
+  session     DuelSession  @relation(fields:[sessionId], references:[id], onDelete: Cascade)
+  question    DuelQuestion @relation(fields:[questionId], references:[id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@map("duel_answers")
 }
