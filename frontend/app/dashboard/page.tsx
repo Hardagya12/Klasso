@@ -9,14 +9,21 @@ import {
   StickerStar, StickerApple, RulerPencilDoodle,
 } from "../components/dashboard/DashboardComponents";
 import Sidebar from "../components/Sidebar";
+import NotificationPanel from "../components/NotificationPanel";
+import OnboardingModal from "../components/OnboardingModal";
 
 export default function TeacherDashboard() {
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [showOnboarding, setShowOnboarding] = React.useState(true);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#FDFBF5", fontFamily: '"DM Sans", sans-serif', position: "relative", overflow: "hidden" }}>
       <NotebookTexture />
       <ScatteredDoodles />
 
       <Sidebar />
+      <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+      <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
 
       {/* ─── MAIN AREA ─── */}
       <main style={{ flex: 1, marginLeft: 240, display: "flex", flexDirection: "column" }}>
@@ -49,7 +56,7 @@ export default function TeacherDashboard() {
 
           {/* Right actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{ position: "relative", cursor: "pointer" }}>
+            <div style={{ position: "relative", cursor: "pointer" }} onClick={() => setShowNotifications(true)}>
               <BellIcon size={22}/>
               <span style={{
                 position: "absolute", top: 0, right: 0, width: 9, height: 9,
