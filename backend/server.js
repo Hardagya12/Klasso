@@ -17,14 +17,16 @@ const classRoutes    = require('./src/routes/classes');
 const subjectRoutes  = require('./src/routes/subjects');
 const studentRoutes  = require('./src/routes/students');
 const attendanceRoutes = require('./src/routes/attendance');
-const examRoutes     = require('./src/routes/exams');
+const examRoutes       = require('./src/routes/exams');
+const marksRoutes      = require('./src/routes/marks');
 const assignmentRoutes = require('./src/routes/assignments');
 const timetableRoutes  = require('./src/routes/timetable');
 const announcementRoutes = require('./src/routes/announcements');
 const messageRoutes  = require('./src/routes/messages');
 const notificationRoutes = require('./src/routes/notifications');
 const feeRoutes      = require('./src/routes/fees');
-const reportRoutes   = require('./src/routes/reports');
+const reportRoutes     = require('./src/routes/reports');
+const lessonPlanRoutes = require('./src/routes/lessonPlans');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -52,6 +54,7 @@ app.use('/api/subjects',      subjectRoutes);
 app.use('/api/students',      studentRoutes);
 app.use('/api/attendance',    attendanceRoutes);
 app.use('/api/exams',         examRoutes);
+app.use('/api/marks',         marksRoutes);
 app.use('/api/assignments',   assignmentRoutes);
 app.use('/api/timetable',     timetableRoutes);
 app.use('/api/announcements', announcementRoutes);
@@ -59,6 +62,7 @@ app.use('/api/messages',      messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/fees',          feeRoutes);
 app.use('/api/reports',       reportRoutes);
+app.use('/api/lesson-plans',  lessonPlanRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
