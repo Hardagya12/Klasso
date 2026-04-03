@@ -24,6 +24,7 @@ const timetableRoutes = require('./src/routes/timetable');
 const announcementRoutes = require('./src/routes/announcements');
 const messageRoutes = require('./src/routes/messages');
 const notificationRoutes = require('./src/routes/notifications');
+const xpRoutes = require('./src/routes/classXp');
 const feeRoutes = require('./src/routes/fees');
 const reportRoutes = require('./src/routes/reports');
 const lessonPlanRoutes = require('./src/routes/lessonPlans');
@@ -60,6 +61,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
 });
 
+const streakRoutes = require('./src/routes/streak');
+
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -82,6 +85,8 @@ app.use('/api/study-materials', studyMaterialRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/streak', streakRoutes);
+app.use('/api/xp', xpRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
