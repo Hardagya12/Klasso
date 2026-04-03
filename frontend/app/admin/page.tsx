@@ -1,7 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AdminSidebar from "../components/ui/AdminSidebar";
+import { apiData } from "../../lib/api";
+import { useAuth } from "../providers";
+
+type AdminDash = {
+  school: { name: string; total_students: number; total_teachers: number; total_classes: number };
+  today: { attendance_percentage: number; classes_with_attendance_marked: number; classes_total: number };
+  academics: { overall_pass_rate: number; at_risk_students: number; pending_reports: number };
+  fees: { collected_this_month: number; pending_total: number };
+  recent_announcements: Array<{ id: string; title: string; audience: string; created_at: string }>;
+  attendance_trend_7days: Array<{ date: string; percentage: number }>;
+};
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES - ICONS & DECORATIONS
@@ -267,25 +278,28 @@ const PencilBar = ({ name, score, color, width }: { name: string, score: number,
 // ═══════════════════════════════════════════════
 
 export default function AdminDashboard() {
-  
-  // Fake Heatmap Data
-  const days = Array.from({length: 30}, (_, i) => {
-    if (i % 7 === 5 || i % 7 === 6) return { type: "weekend" };
-    const rand = Math.random();
-    if (rand > 0.4) return { type: "high", val: ">95%" }; 
-    if (rand > 0.15) return { type: "med", val: "90-95%" };
-    if (rand > 0.05) return { type: "low", val: "80-90%" };
-    return { type: "bad", val: "<80%" };
-  });
+  const { user } = useAuth();
+  const [dash, setDash] = useState<AdminDash | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const heatmapColor = (type: string) => {
-    switch(type) {
-      case "high": return "#5BAD6F"; // dark green
-      case "med": return "#A9D6B5"; // light green
-      case "low": return "#F5A623"; // amber
-      case "bad": return "#E8534A"; // red
-      default: return "#F3F2EE"; // weekend/grey
-    }
+  useEffect(() => {
+    void (async () => {
+      try {
+        const d = await apiData<AdminDash>("/api/analytics/admin");
+        setDash(d);
+      } catch (e) {
+        setLoadErr(e instanceof Error ? e.message : "Failed to load dashboard");
+      }
+    })();
+  }, []);
+
+  const trend = dash?.attendance_trend_7days ?? [];
+  const heatmapColor = (pct: number) => {
+    if (pct >= 95) return "#5BAD6F";
+    if (pct >= 90) return "#A9D6B5";
+    if (pct >= 80) return "#F5A623";
+    if (pct <= 0) return "#F3F2EE";
+    return "#E8534A";
   };
 
   return (
@@ -308,7 +322,8 @@ export default function AdminDashboard() {
         <header className="h-[80px] shrink-0 border-b-2 border-[#E8E4D9] bg-white px-8 flex justify-between items-center shadow-sm relative z-20">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-extrabold text-[#2C2A24]" style={{ fontFamily: '"Nunito", sans-serif' }}>
-              Good morning, Principal Sharma <span className="text-[#F5A623]">✦</span>
+              {dash?.school?.name || "School"} — {user?.name || "Admin"}{" "}
+              <span className="text-[#F5A623]">✦</span>
             </h1>
             <div className="px-3 py-1 bg-[#EEF5FF] text-[#2471A3] border border-[#4A90D9] rounded-full text-xs font-bold font-heading">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -335,21 +350,23 @@ export default function AdminDashboard() {
         
         {/* ── SCROLLABLE CONTENT ── */}
         <main className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar pb-16">
+          {loadErr && (
+            <p className="text-red-600 font-bold text-sm">{loadErr}</p>
+          )}
           
           {/* ════ ROW 1: KPIs ════ */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
-            <KPICard title="Total Students" value="1,240" icon={<GroupDoodle size={20}/>} />
-            <KPICard title="Total Teachers" value="48" icon={<PersonAppleDoodle size={20}/>} />
-            <KPICard title="Today's Attendance" value="94.2%" valueColor="#5BAD6F" icon={<CheckmarkDoodle size={20}/>} 
-              specialSub={<span className="text-xs font-bold text-[#5BAD6F] bg-[#D5F5E3] px-1.5 py-0.5 rounded ml-2">+1.2%</span>}/>
-            <KPICard title="Pending Reports" value="23" valueColor="#F5A623" icon={<ClipboardDoodle size={20}/>} />
-            <KPICard title="Fee Collected" value="₹4.2L" icon={<CoinDoodle size={20}/>} 
+            <KPICard title="Total Students" value={dash ? String(dash.school.total_students) : "…"} icon={<GroupDoodle size={20}/>} />
+            <KPICard title="Total Teachers" value={dash ? String(dash.school.total_teachers) : "…"} icon={<PersonAppleDoodle size={20}/>} />
+            <KPICard title="Today's Attendance" value={dash ? `${dash.today.attendance_percentage}%` : "…"} valueColor="#5BAD6F" icon={<CheckmarkDoodle size={20}/>} 
+              specialSub={<span className="text-xs font-bold text-[#7A7670] bg-[#F3F4F6] px-1.5 py-0.5 rounded ml-2">{dash ? `${dash.today.classes_with_attendance_marked}/${dash.today.classes_total} classes` : ""}</span>}/>
+            <KPICard title="Pending Reports" value={dash ? String(dash.academics.pending_reports) : "…"} valueColor="#F5A623" icon={<ClipboardDoodle size={20}/>} />
+            <KPICard title="Fees (month)" value={dash ? `₹${Math.round(dash.fees.collected_this_month).toLocaleString()}` : "…"} icon={<CoinDoodle size={20}/>} 
               specialSub={
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1.5 bg-[#E8E4D9] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#4A90D9] rounded-full" style={{ width: '70%' }}></div>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#7A7670] whitespace-nowrap">/ ₹6L</span>
+                  <span className="text-[10px] font-bold text-[#7A7670] whitespace-nowrap">
+                    Pending ₹{dash ? Math.round(dash.fees.pending_total).toLocaleString() : "…"}
+                  </span>
                 </div>
               }/>
           </div>
@@ -361,27 +378,32 @@ export default function AdminDashboard() {
             <div className="flex-[55] bg-white border-2 border-[#2C2A24] rounded-[16px] shadow-[4px_4px_0px_#2C2A24] p-6 relative overflow-hidden">
               <div className="flex items-center gap-3 mb-6 border-b-2 border-[#FDFBF5] pb-3">
                 <CalendarDoodle />
-                <h2 className="font-heading font-extrabold text-[#2C2A24] text-lg">School Attendance Heatmap</h2>
-                <span className="ml-auto text-sm font-heading font-bold text-[#7A7670]">April 2025</span>
+                <h2 className="font-heading font-extrabold text-[#2C2A24] text-lg">Attendance trend (last 7 days)</h2>
+                <span className="ml-auto text-sm font-heading font-bold text-[#7A7670]">Live data</span>
               </div>
               
-              <div className="grid grid-cols-7 gap-2 mb-6">
-                {['M','T','W','T','F','S','S'].map((day, i) => (
-                  <div key={i} className="text-center font-heading font-bold text-xs text-[#A9A59E] mb-2">{day}</div>
-                ))}
-                
-                {/* 2 fillers at start assuming month starts on Wednesday */}
-                <div /><div />
-                
-                {days.map((day, i) => (
-                  <div key={i} 
-                    className="aspect-square rounded-[8px] flex items-center justify-center border-2 border-black/5 hover:scale-110 transition-transform cursor-pointer relative"
-                    style={{ backgroundColor: heatmapColor(day.type) }}
-                    title={day.val}
-                  >
-                    {day.type === "weekend" && <TinyXDoodle size={10} />}
+              <div className="flex gap-2 mb-6 items-end h-40">
+                {trend.length === 0 && (
+                  <p className="text-sm text-[#7A7670]">No trend data yet.</p>
+                )}
+                {trend.map((t, i) => {
+                  const pct = t.percentage ?? 0;
+                  return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div
+                      className="w-full rounded-t-md border-2 border-black/10 min-h-[20px] transition-all"
+                      style={{
+                        height: `${Math.max(8, Math.min(100, pct))}%`,
+                        backgroundColor: heatmapColor(pct),
+                      }}
+                      title={`${pct}%`}
+                    />
+                    <span className="text-[9px] font-bold text-[#7A7670] truncate max-w-full">
+                      {String(t.date).slice(5)}
+                    </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="flex justify-center gap-6 mt-2 pt-4 border-t border-[#E8E4D9]">

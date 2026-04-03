@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { apiData } from "../../../lib/api";
 import { 
-  ChevronLeft, MessageCircle, FileText, Sparkles, BookOpen, Clock, 
-  Lightbulb, ShieldAlert, Award, Calendar, Download
+  ChevronLeft, MessageCircle, FileText, Sparkles, BookOpen, 
+  Lightbulb, Calendar, Download
 } from "lucide-react";
 
 // Doodles
@@ -67,38 +68,211 @@ const RulerDoodle = () => (
   </svg>
 );
 
-const SparklineSVG = () => (
-  <svg width="100" height="30" viewBox="0 0 100 30" fill="none">
-    <path d="M5 25L25 10L45 15L65 5L85 20L95 10" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="5" cy="25" r="3" fill="#3B82F6"/>
-    <circle cx="25" cy="10" r="3" fill="#3B82F6"/>
-    <circle cx="45" cy="15" r="3" fill="#3B82F6"/>
-    <circle cx="65" cy="5" r="3" fill="#3B82F6"/>
-    <circle cx="85" cy="20" r="3" fill="#3B82F6"/>
-    <circle cx="95" cy="10" r="3" fill="#3B82F6"/>
-  </svg>
-);
+type StudentProfilePayload = {
+  student: { id: string; roll_no: string };
+  user: { name: string; email: string; avatar_url?: string | null };
+  class: {
+    id?: string | null;
+    name?: string | null;
+    section?: string | null;
+    class_teacher_name?: string | null;
+  } | null;
+  fee_status?: { paid: number; pending: number; total: number };
+  attendance_summary: {
+    percentage: number;
+    present: number;
+    absent: number;
+    late?: number;
+    excused?: number;
+    total?: number;
+  };
+  recent_marks: Array<{
+    subject_name: string;
+    score: string | number;
+    max_marks: string | number;
+    grade: string;
+    exam_name: string;
+  }>;
+  pending_assignments: Array<{ title: string; subject_name: string; due_date: string }>;
+};
+
+type AttendanceCalPayload = {
+  month: number;
+  year: number;
+  calendar: Array<{ date: string; status: string; remark: string | null }>;
+  summary: {
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    total: number;
+    percentage: number;
+  };
+};
+
+type MarkRow = {
+  exam_name: string;
+  exam_type?: string;
+  start_date: string;
+  subject_name: string;
+  subject_code?: string;
+  score: string | number;
+  max_marks: string | number;
+  passing_marks?: string | number;
+  grade: string;
+  remarks: string | null;
+};
+
+type DocRow = {
+  id: string;
+  type: string;
+  generated_at: string;
+  issued: boolean;
+  file_url: string | null;
+};
+
+const SUBJ_COLORS = [
+  "#EF4444",
+  "#10B981",
+  "#3B82F6",
+  "#F59E0B",
+  "#8B5CF6",
+  "#EC4899",
+];
+
+function formatClassLabel(
+  c: StudentProfilePayload["class"]
+): string {
+  if (!c) return "—";
+  const n = c.name?.trim();
+  const s = c.section?.trim();
+  if (!n && !s) return "—";
+  if (n && s) return `${n}-${s}`;
+  return n || s || "—";
+}
+
+function attendanceMoodLabel(pct: number): string {
+  if (pct >= 90) return "Excellent";
+  if (pct >= 85) return "On track";
+  if (pct >= 70) return "Needs focus";
+  return "At risk";
+}
 
 export default function StudentProfile() {
   const params = useParams();
   const id = params?.id as string | undefined;
   const [activeTab, setActiveTab] = useState("Overview");
+  const [payload, setPayload] = useState<StudentProfilePayload | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  // Mock Student
+  const now = new Date();
+  const [calMonth, setCalMonth] = useState(now.getMonth() + 1);
+  const [calYear, setCalYear] = useState(now.getFullYear());
+  const [attCal, setAttCal] = useState<AttendanceCalPayload | null>(null);
+  const [attErr, setAttErr] = useState<string | null>(null);
+  const [allMarks, setAllMarks] = useState<MarkRow[] | null>(null);
+  const [marksErr, setMarksErr] = useState<string | null>(null);
+  const [docs, setDocs] = useState<DocRow[] | null>(null);
+  const [docsErr, setDocsErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    void (async () => {
+      try {
+        const d = await apiData<StudentProfilePayload>(`/api/students/${id}`);
+        setPayload(d);
+      } catch (e) {
+        setLoadErr(e instanceof Error ? e.message : "Failed to load student");
+      }
+    })();
+  }, [id]);
+
+  useEffect(() => {
+    if (activeTab !== "Attendance" || !id) return;
+    setAttErr(null);
+    void (async () => {
+      try {
+        const d = await apiData<AttendanceCalPayload>(
+          `/api/students/${id}/attendance?month=${calMonth}&year=${calYear}`
+        );
+        setAttCal(d);
+      } catch (e) {
+        setAttErr(e instanceof Error ? e.message : "Failed to load attendance");
+      }
+    })();
+  }, [activeTab, id, calMonth, calYear]);
+
+  useEffect(() => {
+    if ((activeTab !== "Grades" && activeTab !== "Notes & Docs") || !id) return;
+    setMarksErr(null);
+    void (async () => {
+      try {
+        const rows = await apiData<MarkRow[]>(`/api/students/${id}/marks`);
+        setAllMarks(rows);
+      } catch (e) {
+        setMarksErr(e instanceof Error ? e.message : "Failed to load marks");
+      }
+    })();
+  }, [activeTab, id]);
+
+  useEffect(() => {
+    if (activeTab !== "Notes & Docs" || !id) return;
+    setDocsErr(null);
+    void (async () => {
+      try {
+        const rows = await apiData<DocRow[]>(`/api/documents/student/${id}`);
+        setDocs(rows);
+      } catch (e) {
+        setDocsErr(e instanceof Error ? e.message : "Failed to load documents");
+      }
+    })();
+  }, [activeTab, id]);
+
+  const pct = payload?.attendance_summary?.percentage ?? 0;
+  const tags: { label: string; color: string }[] = [];
+  if ((payload?.fee_status?.pending ?? 0) > 0) {
+    tags.push({
+      label: "Fee pending",
+      color: "bg-amber-100 text-amber-900 border-amber-300",
+    });
+  }
+  if (payload && pct < 75 && (payload.attendance_summary?.total ?? 0) > 0) {
+    tags.push({
+      label: "Attendance watch",
+      color: "bg-red-100 text-red-800 border-red-300",
+    });
+  }
+
   const student = {
-    name: "Isha Sharma", class: "8-A", roll: "14", isTopPerformer: true,
-    tags: [{ label: "Math Weak", color: "bg-red-100 text-red-700 border-red-300" }, { label: "Science Strong", color: "bg-green-100 text-green-700 border-green-300" }, { label: "Fee Pending", color: "bg-gray-100 text-gray-700 border-gray-300" }],
-    avatar: "https://i.pravatar.cc/150?u=2",
-    attendance: 82, grade: "B+", assignments: "18/22",
-    aiInsights: ["Attendance dropped 15% this month, correlating with missed assignments.", "Shows strong aptitude in practical Science projects.", "Needs immediate intervention for upcoming Math midterm."],
-    subjects: [
-      { name: "Mathematics", grade: "C-", progress: 65, color: "#EF4444" },
-      { name: "Science", grade: "A", progress: 92, color: "#10B981" },
-      { name: "English", grade: "B+", progress: 85, color: "#3B82F6" },
-      { name: "History", grade: "B", progress: 78, color: "#F59E0B" },
-      { name: "Art", grade: "A+", progress: 98, color: "#8B5CF6" },
-      { name: "Geography", grade: "B-", progress: 72, color: "#EC4899" }
-    ]
+    name: payload?.user?.name ?? "Loading…",
+    class: formatClassLabel(payload?.class ?? null),
+    roll: payload?.student?.roll_no ?? "—",
+    isTopPerformer: pct >= 90,
+    tags,
+    avatar:
+      payload?.user?.avatar_url ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(payload?.user?.name || "Student")}`,
+    attendance: Math.round(pct),
+    grade: payload?.recent_marks?.[0]?.grade ?? "—",
+    gradeMood:
+      payload?.recent_marks?.length ?
+        "From latest recorded exam"
+      : "No grades yet",
+    attendanceMood: payload ? attendanceMoodLabel(Math.round(pct)) : "—",
+    assignments: payload ? `${payload.pending_assignments?.length ?? 0} pending` : "—",
+    aiInsights: [] as string[],
+    subjects:
+      payload?.recent_marks?.length ?
+        payload.recent_marks.map((m, i) => ({
+          name: m.subject_name,
+          grade: m.grade,
+          progress: Math.min(
+            100,
+            Math.round((Number(m.score) / Math.max(1, Number(m.max_marks))) * 100)
+          ),
+          color: SUBJ_COLORS[i % SUBJ_COLORS.length],
+        }))
+      : [],
   };
 
   const TABS = ["Overview", "Attendance", "Grades", "Notes & Docs"];
@@ -109,9 +283,15 @@ export default function StudentProfile() {
 
       <main className="flex-1 ml-[80px] px-8 py-8 w-full max-w-full">
         {/* Breadcrumb / Back Navigation */}
-        <Link href="/students" className="inline-flex items-center gap-2 text-[#7A7670] hover:text-[#2C2A24] font-bold mb-6 font-['Nunito']">
+        <Link href="/teacher/students" className="inline-flex items-center gap-2 text-[#7A7670] hover:text-[#2C2A24] font-bold mb-6 font-['Nunito']">
             <ChevronLeft size={20} strokeWidth={3} /> Back to Directory
         </Link>
+
+        {loadErr && (
+          <p className="text-red-600 font-bold mb-4" role="alert">
+            {loadErr}
+          </p>
+        )}
 
         {/* HERO SECTION */}
         <div className="relative bg-white border-2 border-[#E8E4D9] rounded-2xl p-8 mb-12 shadow-[4px_4px_0_#E8E4D9] overflow-hidden" 
@@ -196,15 +376,15 @@ export default function StudentProfile() {
                     </div>
                     <div>
                        <div className="text-[#A39E93] text-sm font-bold uppercase tracking-widest mb-1">Attendance</div>
-                       <div className="text-2xl font-black text-[#2C2A24] font-['Nunito']">Needs Focus</div>
+                       <div className="text-2xl font-black text-[#2C2A24] font-['Nunito']">{student.attendanceMood}</div>
                     </div>
                  </div>
 
                  <div className="bg-[#FAF9F6] border-2 border-dashed border-[#E8E4D9] p-6 rounded-2xl flex items-center gap-6">
                     <GradeBadge grade={student.grade} />
                     <div>
-                       <div className="text-[#A39E93] text-sm font-bold uppercase tracking-widest mb-1">Average Grade</div>
-                       <div className="text-2xl font-black text-[#2C2A24] font-['Nunito']">Good Standing</div>
+                       <div className="text-[#A39E93] text-sm font-bold uppercase tracking-widest mb-1">Latest grade</div>
+                       <div className="text-2xl font-black text-[#2C2A24] font-['Nunito']">{student.gradeMood}</div>
                     </div>
                  </div>
 
@@ -217,37 +397,35 @@ export default function StudentProfile() {
                  </div>
                </div>
 
-               {/* Performance Timeline */}
+               {/* Recent assessments (from profile payload) */}
                <div className="bg-white border-2 border-[#E8E4D9] rounded-2xl p-6 mb-10 relative shadow-[2px_2px_0_#F3F4F6]">
                   <h3 className="text-xl font-bold font-['Nunito'] mb-6 flex items-center gap-2">
-                     <svg width="24" height="24" viewBox="0 0 100 100" fill="none"><path d="M10 90L90 90M10 90V10M10 90L30 50L50 60L90 20" stroke="#3B82F6" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                     Performance Timeline (Yearly Trend)
+                     <BookOpen className="text-blue-500" size={24} strokeWidth={2.5} />
+                     Recent assessments
                   </h3>
-                  {/* Wobbly line chart visualization */}
-                  <div className="relative h-48 w-full border-b-2 border-l-2 border-[#E8E4D9] flex items-end ml-4">
-                     {/* Y-Axis labels */}
-                     <div className="absolute -left-8 bottom-0 text-xs font-bold text-[#A39E93]">0%</div>
-                     <div className="absolute -left-10 top-1/2 text-xs font-bold text-[#A39E93]">50%</div>
-                     <div className="absolute -left-12 top-0 text-xs font-bold text-[#A39E93]">100%</div>
-                     
-                     <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" className="absolute bottom-0 left-0">
-                       <path d="M50 120 Q150 140 250 80 T450 60 T650 90 T850 40 T950 20" fill="none" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round"/>
-                       <circle cx="50" cy="120" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                       <circle cx="250" cy="80" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                       <circle cx="450" cy="60" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                       <circle cx="650" cy="90" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                       <circle cx="850" cy="40" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                       <circle cx="950" cy="20" r="10" fill="#FBBF24" stroke="#B45309" strokeWidth="3"/>
-                     </svg>
-                     
-                     <div className="absolute -bottom-8 left-[50px] text-xs font-bold text-[#A39E93]">Sep</div>
-                     <div className="absolute -bottom-8 left-[250px] text-xs font-bold text-[#A39E93]">Oct</div>
-                     <div className="absolute -bottom-8 left-[450px] text-xs font-bold text-[#A39E93]">Nov</div>
-                     <div className="absolute -bottom-8 left-[650px] text-xs font-bold text-[#A39E93]">Dec</div>
-                     <div className="absolute -bottom-8 left-[850px] text-xs font-bold text-[#A39E93]">Jan</div>
-                     <div className="absolute -bottom-8 left-[950px] text-xs font-bold text-[#A39E93]">Feb</div>
-                  </div>
-                  <div className="mt-12 text-center text-sm font-bold text-[#A39E93] italic">Aggregate monthly averages plotted</div>
+                  {!payload?.recent_marks?.length ? (
+                    <p className="text-[#A39E93] font-bold">
+                      No marks recorded yet. Grades will appear here after exams are graded.
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {payload.recent_marks.map((m, i) => (
+                        <li
+                          key={`${m.exam_name}-${m.subject_name}-${i}`}
+                          className="flex flex-wrap items-baseline justify-between gap-2 border-2 border-dashed border-[#E8E4D9] rounded-xl px-4 py-3"
+                        >
+                          <span className="font-bold text-[#2C2A24]">{m.subject_name}</span>
+                          <span className="text-sm font-bold text-[#7A7670]">{m.exam_name}</span>
+                          <span className="font-black text-[#C2410C] font-['Caveat'] text-xl">
+                            {m.grade}{" "}
+                            <span className="text-sm font-['Nunito'] text-[#A39E93]">
+                              ({m.score}/{m.max_marks})
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                </div>
 
                {/* AI Insights Card */}
@@ -256,16 +434,23 @@ export default function StudentProfile() {
                      <Lightbulb className="text-amber-500" size={32} />
                   </div>
                   <h3 className="text-xl font-black font-['Nunito'] text-amber-900 ml-10 mb-4">AI Observations</h3>
-                  <ul className="space-y-4">
-                    {student.aiInsights.map((insight, i) => (
-                      <li key={i} className="flex gap-4 items-start text-amber-800 font-medium text-lg">
-                        <svg width="30" height="30" viewBox="0 0 100 100" fill="none" className="shrink-0 mt-1">
-                          <path d="M20 50Q50 20 80 50M60 30L80 50L60 70" stroke="#D97706" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        "{insight}"
-                      </li>
-                    ))}
-                  </ul>
+                  {student.aiInsights.length === 0 ? (
+                    <p className="text-amber-800 font-medium text-lg ml-10">
+                      No AI summary for this learner yet. Use the AI tools elsewhere in the app to generate
+                      personalized insights when that workflow is enabled for your school.
+                    </p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {student.aiInsights.map((insight, i) => (
+                        <li key={i} className="flex gap-4 items-start text-amber-800 font-medium text-lg">
+                          <svg width="30" height="30" viewBox="0 0 100 100" fill="none" className="shrink-0 mt-1">
+                            <path d="M20 50Q50 20 80 50M60 30L80 50L60 70" stroke="#D97706" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          &ldquo;{insight}&rdquo;
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                </div>
             </div>
           )}
@@ -273,55 +458,150 @@ export default function StudentProfile() {
           {/* TAB 2: ATTENDANCE */}
           {activeTab === "Attendance" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
                 <h3 className="text-2xl font-black font-['Nunito'] text-[#2C2A24] flex items-center gap-3">
-                  <Calendar className="text-emerald-500" /> Attendance Ledger
+                  <Calendar className="text-emerald-500" /> Attendance
                 </h3>
-                <button className="flex items-center gap-2 bg-red-50 text-red-700 border-2 border-red-200 px-4 py-2 rounded-xl font-bold shadow-[2px_2px_0_#FECACA] hover:bg-red-100 active:translate-y-1 active:shadow-none transition-all">
-                   <ShieldAlert size={18} /> Send Attendance Warning
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl border-2 border-[#E8E4D9] font-bold text-[#4A473F] hover:bg-[#FAFAFA]"
+                    onClick={() => {
+                      const d = new Date(calYear, calMonth - 2, 1);
+                      setCalMonth(d.getMonth() + 1);
+                      setCalYear(d.getFullYear());
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <span className="font-bold text-[#2C2A24] min-w-[10rem] text-center">
+                    {new Date(calYear, calMonth - 1, 1).toLocaleString(undefined, {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl border-2 border-[#E8E4D9] font-bold text-[#4A473F] hover:bg-[#FAFAFA]"
+                    onClick={() => {
+                      const d = new Date(calYear, calMonth, 1);
+                      setCalMonth(d.getMonth() + 1);
+                      setCalYear(d.getFullYear());
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
-              {/* Monthly Grid Mock */}
-              <div className="grid grid-cols-7 gap-2 mb-8 bg-[#FAFAFA] p-6 rounded-2xl border-2 border-[#E8E4D9]">
-                 {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => <div key={d} className="text-center font-bold text-[#A39E93]">{d}</div>)}
-                 {Array.from({length: 30}).map((_, i) => (
-                    <div key={i} className={`aspect-square rounded-xl border-2 flex items-center justify-center font-bold font-['Nunito'] ${
-                       [12, 14, 28].includes(i+1) ? 'bg-red-100 border-red-300 text-red-700 relative' : 
-                       [5, 6].includes(i+1) ? 'bg-amber-100 border-amber-300 text-amber-700' : 
-                       'bg-white border-[#E8E4D9] text-[#4A473F]'
-                    }`}>
-                      {i+1}
-                      {[12, 14, 28].includes(i+1) && <div className="absolute inset-0 m-auto w-[120%] h-[2px] bg-red-500 transform rotate-45 pointer-events-none"/>}
+              {attErr && (
+                <p className="text-red-600 font-bold mb-4" role="alert">
+                  {attErr}
+                </p>
+              )}
+
+              {attCal && (
+                <p className="text-sm font-bold text-[#7A7670] mb-4">
+                  This month: {attCal.summary.present} present · {attCal.summary.absent} absent ·{" "}
+                  {attCal.summary.late} late · {attCal.summary.excused} excused ·{" "}
+                  {attCal.summary.total ? `${attCal.summary.percentage}%` : "no sessions"} recorded
+                </p>
+              )}
+
+              {(() => {
+                const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                const startWeekday = new Date(calYear, calMonth - 1, 1).getDay();
+                const leading = (startWeekday + 6) % 7;
+                const byDay = new Map<
+                  number,
+                  { status: string; remark: string | null }
+                >();
+                for (const c of attCal?.calendar ?? []) {
+                  const dt = new Date(c.date);
+                  if (dt.getMonth() + 1 === calMonth && dt.getFullYear() === calYear) {
+                    byDay.set(dt.getDate(), { status: c.status, remark: c.remark });
+                  }
+                }
+                const cellClass = (status: string | undefined) => {
+                  switch (status) {
+                    case "present":
+                      return "bg-emerald-50 border-emerald-300 text-emerald-900";
+                    case "absent":
+                      return "bg-red-100 border-red-300 text-red-800 relative";
+                    case "late":
+                      return "bg-amber-100 border-amber-300 text-amber-900";
+                    case "excused":
+                      return "bg-slate-100 border-slate-300 text-slate-800";
+                    default:
+                      return "bg-[#FAFAFA] border-[#E8E4D9] text-[#A39E93]";
+                  }
+                };
+                const cells: React.ReactNode[] = [];
+                for (let i = 0; i < leading; i++) {
+                  cells.push(<div key={`pad-${i}`} className="aspect-square" />);
+                }
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const rec = byDay.get(day);
+                  cells.push(
+                    <div
+                      key={day}
+                      title={
+                        rec?.remark?.trim() ?
+                          `${rec.status}: ${rec.remark}`
+                        : rec?.status || "No attendance recorded"
+                      }
+                      className={`relative aspect-square rounded-xl border-2 flex items-center justify-center font-bold font-['Nunito'] text-sm ${cellClass(rec?.status)}`}
+                    >
+                      {day}
+                      {rec?.status === "absent" && (
+                        <div className="absolute inset-0 m-auto w-[120%] h-[2px] bg-red-500 transform rotate-45 pointer-events-none" />
+                      )}
                     </div>
-                 ))}
-              </div>
+                  );
+                }
+                return (
+                  <div className="grid grid-cols-7 gap-2 mb-8 bg-[#FAFAFA] p-6 rounded-2xl border-2 border-[#E8E4D9] relative">
+                    {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
+                      <div key={d} className="text-center font-bold text-[#A39E93] text-sm">
+                        {d}
+                      </div>
+                    ))}
+                    {cells}
+                  </div>
+                );
+              })()}
 
-              {/* Absence Log */}
-              <h4 className="font-bold text-[#4A473F] mb-4">Absence Log (Current Term)</h4>
+              <h4 className="font-bold text-[#4A473F] mb-4">Absence log (this month)</h4>
               <table className="w-full text-left">
-                 <thead>
-                   <tr className="border-b-2 border-dashed border-[#E8E4D9]">
-                     <th className="py-3 text-[#A39E93]">Date</th>
-                     <th className="py-3 text-[#A39E93]">Reason</th>
-                     <th className="py-3 text-[#A39E93]">Parent Notified</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y-2 divide-dashed divide-[#F3F4F6]">
-                   {[{ d: "Oct 28", r: "Sick Leave (Fever)", n: true }, { d: "Oct 14", r: "Unexcused Absence", n: true }, { d: "Oct 12", r: "Unexcused Absence", n: false }].map((ab, i) => (
-                     <tr key={i}>
-                       <td className="py-4 font-bold">{ab.d}</td>
-                       <td className="py-4 font-medium text-[#7A7670]">{ab.r}</td>
-                       <td className="py-4">
-                         {ab.n ? (
-                           <svg width="24" height="24" viewBox="0 0 100 100" fill="none"><path d="M20 50L40 70L80 30" stroke="#10B981" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                         ) : (
-                           <span className="text-[#A39E93] text-sm font-bold">Pending</span>
-                         )}
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
+                <thead>
+                  <tr className="border-b-2 border-dashed border-[#E8E4D9]">
+                    <th className="py-3 text-[#A39E93]">Date</th>
+                    <th className="py-3 text-[#A39E93]">Remark</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-dashed divide-[#F3F4F6]">
+                  {(attCal?.calendar ?? [])
+                    .filter((c) => c.status === "absent")
+                    .map((c, i) => (
+                      <tr key={`${c.date}-${i}`}>
+                        <td className="py-4 font-bold">
+                          {new Date(c.date).toLocaleDateString(undefined, {
+                            dateStyle: "medium",
+                          })}
+                        </td>
+                        <td className="py-4 font-medium text-[#7A7670]">
+                          {c.remark?.trim() || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  {(attCal?.calendar ?? []).filter((c) => c.status === "absent").length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="py-6 text-[#A39E93] font-bold">
+                        No absences recorded for this month.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
           )}
@@ -329,36 +609,84 @@ export default function StudentProfile() {
           {/* TAB 3: GRADES */}
           {activeTab === "Grades" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               {marksErr && (
+                 <p className="text-red-600 font-bold mb-4" role="alert">
+                   {marksErr}
+                 </p>
+               )}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {student.subjects.map((sub, i) => (
-                     <div key={i} className="bg-white border-2 border-[#E8E4D9] rounded-2xl p-6 shadow-[2px_2px_0_#E8E4D9] group hover:-translate-y-1 transition-transform relative overflow-hidden" style={{ borderLeftColor: sub.color, borderLeftWidth: 8 }}>
-                        <div className="flex justify-between items-start mb-4">
-                           <h4 className="text-xl font-bold font-['Nunito'] text-[#2C2A24]">{sub.name}</h4>
-                           <span className="text-3xl font-black font-['Caveat']" style={{ color: sub.color }}>{sub.grade}</span>
+                  {(allMarks ?? []).map((row, i) => {
+                    const sub = {
+                      name: row.subject_name,
+                      grade: row.grade,
+                      progress: Math.min(
+                        100,
+                        Math.round(
+                          (Number(row.score) / Math.max(1, Number(row.max_marks))) * 100
+                        )
+                      ),
+                      color: SUBJ_COLORS[i % SUBJ_COLORS.length],
+                      exam: row.exam_name,
+                      when: row.start_date,
+                    };
+                    return (
+                      <div
+                        key={`${row.exam_name}-${row.subject_name}-${row.start_date}-${i}`}
+                        className="bg-white border-2 border-[#E8E4D9] rounded-2xl p-6 shadow-[2px_2px_0_#E8E4D9] group hover:-translate-y-1 transition-transform relative overflow-hidden"
+                        style={{ borderLeftColor: sub.color, borderLeftWidth: 8 }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="text-xl font-bold font-['Nunito'] text-[#2C2A24]">
+                            {sub.name}
+                          </h4>
+                          <span
+                            className="text-3xl font-black font-['Caveat']"
+                            style={{ color: sub.color }}
+                          >
+                            {sub.grade}
+                          </span>
                         </div>
-                        
-                        {/* Progress */}
+                        <p className="text-xs font-bold text-[#A39E93] mb-4">
+                          {sub.exam} ·{" "}
+                          {new Date(sub.when).toLocaleDateString(undefined, {
+                            dateStyle: "medium",
+                          })}{" "}
+                          · {row.score}/{row.max_marks}
+                        </p>
+
                         <div className="mb-4">
-                           <div className="flex justify-between text-xs font-bold text-[#A39E93] mb-1">
-                              <span>Term Progress</span><span>{sub.progress}%</span>
-                           </div>
-                           <div className="w-full bg-[#F3F4F6] h-3 rounded-full overflow-hidden border-2 border-[#E8E4D9]">
-                              <div className="h-full rounded-r-none rounded-l-full" style={{ width: `${sub.progress}%`, backgroundColor: sub.color }} />
-                           </div>
+                          <div className="flex justify-between text-xs font-bold text-[#A39E93] mb-1">
+                            <span>Score vs max</span>
+                            <span>{sub.progress}%</span>
+                          </div>
+                          <div className="w-full bg-[#F3F4F6] h-3 rounded-full overflow-hidden border-2 border-[#E8E4D9]">
+                            <div
+                              className="h-full rounded-r-none rounded-l-full"
+                              style={{
+                                width: `${sub.progress}%`,
+                                backgroundColor: sub.color,
+                              }}
+                            />
+                          </div>
                         </div>
 
-                        {/* Recent Performance Sparkline */}
-                        <div className="flex items-center gap-3">
-                           <span className="text-xs font-bold text-[#A39E93]">Recent</span>
-                           <SparklineSVG />
-                        </div>
+                        {row.remarks?.trim() && (
+                          <p className="text-sm font-medium text-[#4A473F] border-t-2 border-dashed border-[#E8E4D9] pt-3">
+                            {row.remarks}
+                          </p>
+                        )}
 
-                        {/* Hand-drawn Ruler decoration */}
                         <div className="absolute bottom-0 left-0 w-full opacity-50 translate-y-1/2 group-hover:translate-y-0 transition-transform">
-                           <RulerDoodle />
+                          <RulerDoodle />
                         </div>
-                     </div>
-                  ))}
+                      </div>
+                    );
+                  })}
+                  {(allMarks ?? []).length === 0 && !marksErr && (
+                    <p className="text-[#A39E93] font-bold col-span-full">
+                      No grades recorded yet.
+                    </p>
+                  )}
                </div>
             </div>
           )}
@@ -366,56 +694,104 @@ export default function StudentProfile() {
           {/* TAB 4: NOTES & DOCS */}
           {activeTab === "Notes & Docs" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 grid grid-cols-1 lg:grid-cols-2 gap-8">
-               {/* Left: Notes Section (Lined Paper Style) */}
                <div>
                   <div className="flex items-center gap-3 mb-4">
-                     <h3 className="text-2xl font-black font-['Nunito'] text-[#2C2A24]">Teacher Log</h3>
+                     <h3 className="text-2xl font-black font-['Nunito'] text-[#2C2A24]">Remarks from marks</h3>
                      <AppleDoodle />
                   </div>
-                  
+                  {marksErr && (
+                    <p className="text-red-600 font-bold mb-4" role="alert">
+                      {marksErr}
+                    </p>
+                  )}
                   <div className="relative">
-                    <div className="absolute -top-4 -left-4 opacity-50 transform -rotate-12"><PaperclipDoodle /></div>
-                    <textarea 
-                      className="w-full h-80 rounded-xl p-8 pt-10 font-bold text-xl font-['Caveat'] text-blue-900 border-2 border-dashed border-[#E8E4D9] focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-50 resize-none shadow-[4px_4px_0_#E8E4D9]"
-                      placeholder="Write an observational note here..."
-                      style={{ 
-                        backgroundImage: 'linear-gradient(transparent 95%, #E2E8F0 95%)', 
-                        lineHeight: '2rem',
-                        backgroundSize: '100% 2rem',
-                        backgroundColor: '#F8FAFC'
-                      }}
-                       defaultValue={"Isha seemed distracted during today's math module. Need to check if she is understanding the core concepts of Algebra."}
-                    />
+                    <div className="absolute -top-4 -left-4 opacity-50 transform -rotate-12">
+                      <PaperclipDoodle />
+                    </div>
+                    <div
+                      className="min-h-[20rem] rounded-xl p-8 pt-10 font-bold text-lg font-['Nunito'] text-[#2C2A24] border-2 border-dashed border-[#E8E4D9] shadow-[4px_4px_0_#E8E4D9] space-y-4 bg-[#F8FAFC]"
+                    >
+                      {(allMarks ?? []).filter((m) => m.remarks?.trim()).length === 0 ? (
+                        <p className="text-[#7A7670]">
+                          No teacher remarks on file. Remarks appear here when they are saved on individual
+                          marks entries.
+                        </p>
+                      ) : (
+                        <ul className="space-y-4">
+                          {(allMarks ?? [])
+                            .filter((m) => m.remarks?.trim())
+                            .map((m, i) => (
+                              <li
+                                key={`${m.subject_name}-${m.exam_name}-${i}`}
+                                className="border-b-2 border-dashed border-[#E8E4D9] pb-3 last:border-0"
+                              >
+                                <div className="text-sm font-bold text-[#A39E93] mb-1">
+                                  {m.subject_name} · {m.exam_name}
+                                </div>
+                                <div className="font-['Caveat'] text-xl text-blue-900">
+                                  {m.remarks}
+                                </div>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
-                  <button className="mt-4 flex items-center gap-2 bg-[#2C2A24] text-white px-6 py-3 rounded-xl font-bold hover:bg-black shadow-[2px_2px_0_#A39E93] active:translate-y-1 active:shadow-none transition-all">
-                    Save Note
-                  </button>
+                  <p className="mt-4 text-sm font-bold text-[#A39E93]">
+                    Free-form teacher notes will need a dedicated school policy and API; for now, use mark
+                    remarks when recording grades.
+                  </p>
                </div>
 
-               {/* Right: Docs List */}
                <div>
-                 <h3 className="text-2xl font-black font-['Nunito'] text-[#2C2A24] mb-4">Documents File</h3>
+                 <h3 className="text-2xl font-black font-['Nunito'] text-[#2C2A24] mb-4">Generated documents</h3>
+                 {docsErr && (
+                   <p className="text-red-600 font-bold mb-4" role="alert">
+                     {docsErr}
+                   </p>
+                 )}
                  <div className="space-y-3">
-                   {[
-                     { name: "Medical Certificate (Flu)", date: "Oct 29", icon: ShieldAlert },
-                     { name: "Bonafide Certificate Request", date: "Sep 15", icon: BookOpen },
-                     { name: "Science Fair Registration", date: "Aug 02", icon: Lightbulb }
-                   ].map((doc, i) => {
-                      const Icon = doc.icon;
+                   {(docs ?? []).length === 0 && !docsErr && (
+                     <p className="text-[#A39E93] font-bold">
+                       No documents generated for this student yet.
+                     </p>
+                   )}
+                   {(docs ?? []).map((doc) => {
+                      const label = doc.type.replace(/_/g, " ");
                       return (
-                       <div key={i} className="flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-[#E8E4D9] hover:bg-[#FAF9F6] group cursor-pointer transition-colors">
+                       <div
+                         key={doc.id}
+                         className="flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-[#E8E4D9] hover:bg-[#FAF9F6] group transition-colors"
+                       >
                           <div className="flex items-center gap-4">
-                             <div className="bg-white p-2 border-2 border-[#E8E4D9] rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                                <Icon className="text-blue-500" size={20} />
+                             <div className="bg-white p-2 border-2 border-[#E8E4D9] rounded-lg shadow-sm">
+                                <FileText className="text-blue-500" size={20} />
                              </div>
                              <div>
-                                <div className="font-bold text-[#4A473F]">{doc.name}</div>
-                                <div className="text-xs font-bold text-[#A39E93]">{doc.date}</div>
+                                <div className="font-bold text-[#4A473F] capitalize">{label}</div>
+                                <div className="text-xs font-bold text-[#A39E93]">
+                                  {new Date(doc.generated_at).toLocaleString(undefined, {
+                                    dateStyle: "medium",
+                                  })}
+                                  {doc.issued ? " · Issued" : " · Draft"}
+                                </div>
                              </div>
                           </div>
-                          <Download className="text-[#A39E93] group-hover:text-blue-500 transition-colors" size={20} />
+                          {doc.file_url ? (
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#A39E93] hover:text-blue-500"
+                              aria-label="Download document"
+                            >
+                              <Download size={20} />
+                            </a>
+                          ) : (
+                            <Download className="text-[#E8E4D9]" size={20} aria-hidden />
+                          )}
                        </div>
-                     )
+                     );
                    })}
                  </div>
                </div>

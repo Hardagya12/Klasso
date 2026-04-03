@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Plus, ChevronRight, Eye, Mail, MoreVertical } from "lucide-react";
+import { apiPaginated } from "../../../lib/api";
 
 // --- Doodles & Icons ---
 const GroupDoodle = () => (
@@ -23,27 +24,49 @@ const UnderlineDoodle = () => (
   </svg>
 );
 
-// --- Mock Data ---
-const MOCK_STUDENTS = [
-  { id: 1, name: "Aarav Patel", rollNo: "01", classSection: "8-A", status: "Active", attendance: "98%", avatar: "https://i.pravatar.cc/150?u=1" },
-  { id: 2, name: "Isha Sharma", rollNo: "14", classSection: "8-A", status: "At Risk", attendance: "76%", avatar: "https://i.pravatar.cc/150?u=2" },
-  { id: 3, name: "Rohan Gupta", rollNo: "22", classSection: "8-B", status: "Active", attendance: "92%", avatar: "https://i.pravatar.cc/150?u=3" },
-  { id: 4, name: "Meera Singh", rollNo: "18", classSection: "8-A", status: "Fee Pending", attendance: "88%", avatar: "https://i.pravatar.cc/150?u=4" },
-  { id: 5, name: "Karan Desai", rollNo: "05", classSection: "9-C", status: "Active", attendance: "95%", avatar: "https://i.pravatar.cc/150?u=5" },
-  { id: 6, name: "Ananya Reddy", rollNo: "31", classSection: "10-A", status: "Active", attendance: "100%", avatar: "https://i.pravatar.cc/150?u=6" },
-  { id: 7, name: "Vikram Malhotra", rollNo: "11", classSection: "8-B", status: "At Risk", attendance: "81%", avatar: "https://i.pravatar.cc/150?u=7" },
-  { id: 8, name: "Neha Verma", rollNo: "27", classSection: "9-A", status: "Active", attendance: "93%", avatar: "https://i.pravatar.cc/150?u=8" },
-];
+type ApiStudent = {
+  id: string;
+  roll_no: string;
+  user: { name: string; avatar_url?: string | null };
+  class: { name: string; section: string } | null;
+};
 
 export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClass, setFilterClass] = useState("All");
+  const [apiRows, setApiRows] = useState<ApiStudent[]>([]);
 
-  const filteredStudents = MOCK_STUDENTS.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || student.rollNo.includes(searchTerm);
-    const matchesClass = filterClass === "All" || student.classSection.startsWith(filterClass);
-    return matchesSearch && matchesClass;
-  });
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await apiPaginated<ApiStudent>("/api/students?page=1&limit=200");
+        setApiRows(res.data);
+      } catch {
+        setApiRows([]);
+      }
+    })();
+  }, []);
+
+  const filteredStudents = apiRows
+    .filter((student) => {
+      const name = student.user?.name ?? "";
+      const matchesSearch =
+        name.toLowerCase().includes(searchTerm.toLowerCase()) || student.roll_no.includes(searchTerm);
+      const cn = student.class?.name ?? "";
+      const matchesClass = filterClass === "All" || cn.startsWith(filterClass);
+      return matchesSearch && matchesClass;
+    })
+    .map((r) => ({
+      id: r.id,
+      name: r.user?.name ?? "",
+      rollNo: r.roll_no,
+      classSection: r.class ? `${r.class.name}-${r.class.section}` : "—",
+      status: "Active" as const,
+      attendance: "—",
+      avatar:
+        r.user?.avatar_url ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user?.name || "Student")}`,
+    }));
 
   return (
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
@@ -61,7 +84,10 @@ export default function StudentsPage() {
                 Student Directory
               </h1>
               <p className="text-[#7A7670] font-medium mt-1 text-base flex items-center gap-2">
-                Manage all student profiles and records <span className="text-amber-500 text-xl font-bold font-[Caveat] underline decoration-wavy decoration-red-400">1,240 records</span>
+                Manage all student profiles and records{" "}
+                <span className="text-amber-500 text-xl font-bold font-[Caveat] underline decoration-wavy decoration-red-400">
+                  {apiRows.length} records
+                </span>
               </p>
             </div>
           </div>
@@ -140,7 +166,7 @@ export default function StudentsPage() {
                           <div className="text-sm font-bold text-[#2C2A24]" style={{ fontFamily: '"Nunito", sans-serif' }}>
                             {student.name}
                           </div>
-                          <div className="text-xs text-[#A39E93]">ID: STU-2024-{student.id.toString().padStart(3, '0')}</div>
+                          <div className="text-xs text-[#A39E93]">ID: {student.id.slice(0, 8)}…</div>
                         </div>
                       </div>
                     </td>
@@ -152,13 +178,10 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1 w-32">
                         <div className="flex justify-between text-xs font-bold font-body">
-                          <span className={parseInt(student.attendance) < 80 ? "text-red-500" : "text-[#4A473F]"}>{student.attendance}</span>
+                          <span className="text-[#4A473F]">{student.attendance}</span>
                         </div>
                         <div className="w-full bg-[#F0ECE1] rounded-full h-1.5 overflow-hidden">
-                          <div 
-                            className={`h-1.5 rounded-full ${parseInt(student.attendance) < 80 ? 'bg-red-400' : 'bg-green-400'}`} 
-                            style={{ width: student.attendance }}
-                          />
+                          <div className="h-1.5 rounded-full bg-[#E8E4D9]" style={{ width: "20%" }} />
                         </div>
                       </div>
                     </td>
@@ -204,7 +227,10 @@ export default function StudentsPage() {
           
           {/* Pagination Footer */}
           <div className="bg-[#FDFBF5] border-t-2 border-[#E8E4D9] px-6 py-4 flex items-center justify-between">
-            <span className="text-[#A39E93] text-sm font-medium">Showing <b className="text-[#4A473F]">{filteredStudents.length}</b> of <b className="text-[#4A473F]">{MOCK_STUDENTS.length}</b> students</span>
+            <span className="text-[#A39E93] text-sm font-medium">
+              Showing <b className="text-[#4A473F]">{filteredStudents.length}</b> of{" "}
+              <b className="text-[#4A473F]">{apiRows.length}</b> students
+            </span>
             <div className="flex gap-2">
               <button className="px-4 py-2 rounded-lg border-2 border-[#E8E4D9] bg-white text-[#4A473F] font-bold text-sm hover:bg-[#F9F8F5] disabled:opacity-50">Previous</button>
               <button className="px-4 py-2 rounded-lg border-2 border-[#E8E4D9] bg-white text-[#4A473F] font-bold text-sm hover:bg-[#F9F8F5]">Next</button>
