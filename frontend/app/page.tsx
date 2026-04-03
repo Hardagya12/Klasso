@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 import {
   KawaiiBobaCup, KawaiiShiba, KawaiiStrawberry, KawaiiCloud,
@@ -9,7 +10,7 @@ import {
 } from "./components/doodles";
 
 import {
-  StickyNoteCard, KawaiiButton, KawaiiBadge, KawaiiInput, CloudStat, KawaiiAvatar,
+  StickyNoteCard, KawaiiButton, KawaiiBadge, CloudStat,
 } from "./components/ui";
 
 /* ─── Section Helper ─── */
@@ -31,19 +32,19 @@ function Section({ title, subtitle, children, id }: {
   );
 }
 
-export default function KawaiiShowcase() {
+export default function LandingPage() {
   return (
     <main className="min-h-screen bg-background bg-dots relative overflow-hidden">
       {/* ━━━ Floating background doodles ━━━ */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <SakuraPetal size={20} className="absolute top-[8%] left-[5%] animate-kawaii-float opacity-30" />
-        <SakuraPetal size={14} className="absolute top-[15%] right-[10%] animate-kawaii-float opacity-20" style={{ animationDelay: "1s" }} />
-        <SakuraPetal size={18} className="absolute top-[45%] left-[3%] animate-kawaii-float opacity-25" style={{ animationDelay: "2s" }} />
-        <PawPrint size={16} className="absolute top-[25%] right-[6%] opacity-15 animate-kawaii-float" style={{ animationDelay: "0.5s" }} />
-        <PawPrint size={12} className="absolute top-[60%] left-[8%] opacity-10 animate-kawaii-float" style={{ animationDelay: "1.5s" }} />
+        <SakuraPetal size={14} className="absolute top-[15%] right-[10%] animate-kawaii-float opacity-20" />
+        <SakuraPetal size={18} className="absolute top-[45%] left-[3%] animate-kawaii-float opacity-25" />
+        <PawPrint size={16} className="absolute top-[25%] right-[6%] opacity-15 animate-kawaii-float" />
+        <PawPrint size={12} className="absolute top-[60%] left-[8%] opacity-10 animate-kawaii-float" />
         <Sparkle size={14} className="absolute top-[35%] right-[15%] animate-kawaii-sparkle opacity-25" />
-        <Sparkle size={10} className="absolute top-[70%] left-[12%] animate-kawaii-sparkle opacity-20" style={{ animationDelay: "0.7s" }} />
-        <KawaiiHeart size={14} className="absolute top-[50%] right-[4%] animate-kawaii-float opacity-15" style={{ animationDelay: "2.5s" }} />
+        <Sparkle size={10} className="absolute top-[70%] left-[12%] animate-kawaii-sparkle opacity-20" />
+        <KawaiiHeart size={14} className="absolute top-[50%] right-[4%] animate-kawaii-float opacity-15" />
       </div>
 
       {/* ━━━ HERO ━━━ */}
@@ -63,7 +64,7 @@ export default function KawaiiShowcase() {
           <div className="flex items-center gap-3 mb-2">
             <KawaiiShiba size={52} mood="excited" />
             <div>
-              <span className="font-accent text-xl text-text-muted">Kawaii Stationery Shop</span>
+              <span className="font-accent text-xl text-text-muted">AI-Powered Academic Management</span>
               <div className="flex items-center gap-1.5">
                 <KawaiiHeart size={14} />
                 <Sparkle size={12} color="#C8B6FF" />
@@ -73,28 +74,26 @@ export default function KawaiiShowcase() {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-heading font-extrabold text-text mb-3 leading-tight">
-            Klasso{" "}
-            <span className="text-primary">Design</span>{" "}
+            Reduce Teacher Workload with{" "}
+            <span className="text-primary">AI-Powered</span>{" "}
             <span className="relative inline-block">
-              <span className="text-accent">System</span>
+              <span className="text-accent">Automation</span>
               <Sparkle size={20} color="#FFEAA7" className="absolute -top-3 -right-5 animate-kawaii-sparkle" />
             </span>
           </h1>
 
           <p className="text-base text-text-muted font-body max-w-xl mb-6 leading-relaxed">
-            A hyper-cute pastel design system inspired by Japanese stationery shops.
-            Every component is sprinkled with kawaii charm ✨🍓🐸
+            Klasso AI simplifies academic management by automating attendance, grading, and reports — so teachers can focus on teaching, not paperwork.
           </p>
 
           <div className="flex flex-wrap gap-3 mb-4">
-            <KawaiiButton variant="pink" size="lg">
-              <KawaiiPencil size={20} /> Get Started
-            </KawaiiButton>
+            <Link href="/teacher">
+              <KawaiiButton variant="pink" size="lg">
+                <KawaiiPencil size={20} /> Start Now
+              </KawaiiButton>
+            </Link>
             <KawaiiButton variant="mint" size="lg">
-              <KawaiiBook size={20} /> Components
-            </KawaiiButton>
-            <KawaiiButton variant="outline" size="lg">
-              View Docs
+              <KawaiiBook size={20} /> Learn More
             </KawaiiButton>
           </div>
 
@@ -105,383 +104,252 @@ export default function KawaiiShowcase() {
       {/* ━━━ CONTENT ━━━ */}
       <div className="max-w-6xl mx-auto px-6 py-12 relative z-10">
 
-        {/* ── COLOR PALETTE ── */}
-        <Section id="colors" title="Pastel Palette" subtitle="Candy shop colors for every surface & accent">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
-            {[
-              { name: "Sakura Pink", color: "#FFB5C8",  bg: "bg-primary" },
-              { name: "Mint Green",  color: "#A8E6CF",  bg: "bg-secondary" },
-              { name: "Lavender",    color: "#C8B6FF",  bg: "bg-accent" },
-              { name: "Butter",      color: "#FFEAA7",  bg: "bg-butter" },
-              { name: "Baby Blue",   color: "#B8E8FC",  bg: "bg-sky" },
-              { name: "Peach",       color: "#FFCBA4",  bg: "bg-peach" },
-              { name: "Background",  color: "#FFF5F7",  bg: "bg-background" },
-              { name: "Surface",     color: "#FFFFFF",  bg: "bg-surface" },
-              { name: "Text",        color: "#4A4458",  bg: "bg-text" },
-              { name: "Muted",       color: "#9B95A8",  bg: "bg-text-muted" },
-            ].map(({ name, color }) => (
-              <StickyNoteCard key={name} color="white" className="text-center p-3">
-                <div className="w-full h-14 rounded-xl mb-2 border border-border" style={{ backgroundColor: color }} />
-                <p className="font-heading font-bold text-xs">{name}</p>
-                <p className="font-accent text-sm text-text-muted">{color}</p>
-              </StickyNoteCard>
-            ))}
-          </div>
-        </Section>
-
-        {/* ── TYPOGRAPHY ── */}
-        <Section id="typography" title="Typography" subtitle="Rounded fonts for maximum cuteness">
-          <StickyNoteCard color="lavender" tape tapeColor="#FFB5C8" className="space-y-5 mb-6 max-w-2xl">
-            <div>
-              <KawaiiBadge variant="pink" className="mb-2">Nunito — Headings</KawaiiBadge>
-              <h1 className="text-4xl font-heading font-extrabold">Hello, Sensei! 🌸</h1>
-              <h2 className="text-2xl font-heading font-bold text-text-muted">Welcome to Klasso ✨</h2>
-            </div>
-            <WashiTape width={300} color="#A8E6CF" pattern="stripes" />
-            <div>
-              <KawaiiBadge variant="mint" className="mb-2">DM Sans — Body</KawaiiBadge>
-              <p className="text-base font-body">
-                Every great classroom starts with clear communication. Our typography is
-                friendly, readable, and designed to feel like a warm hug. 🤗
-              </p>
-            </div>
-            <WashiTape width={300} color="#FFEAA7" pattern="dots" />
-            <div>
-              <KawaiiBadge variant="lavender" className="mb-2">Caveat — Handwritten</KawaiiBadge>
-              <p className="font-accent text-3xl text-accent-dark">
-                &ldquo;You did amazing today!&rdquo;
-              </p>
-              <p className="font-accent text-lg text-text-muted mt-1">
-                — Teacher&apos;s note 🍓
-              </p>
-            </div>
-          </StickyNoteCard>
-        </Section>
-
-        {/* ── KAWAII SVG GALLERY ── */}
-        <Section id="mascots" title="Kawaii Mascots" subtitle="Adorable friends that live throughout the UI">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {[
-              { label: "Shiba (happy)", el: <KawaiiShiba size={56} mood="happy" /> },
-              { label: "Shiba (sleepy)", el: <KawaiiShiba size={56} mood="sleepy" /> },
-              { label: "Shiba (excited)", el: <KawaiiShiba size={56} mood="excited" /> },
-              { label: "Cloud (happy)", el: <KawaiiCloud size={72} mood="happy" /> },
-              { label: "Cloud (blushy)", el: <KawaiiCloud size={72} mood="blushy" color="#FFE0EA" /> },
-              { label: "Boba (strawberry)", el: <KawaiiBobaCup size={52} flavor="strawberry" /> },
-              { label: "Boba (taro)", el: <KawaiiBobaCup size={52} flavor="taro" /> },
-              { label: "Boba (matcha)", el: <KawaiiBobaCup size={52} flavor="matcha" /> },
-              { label: "Strawberry", el: <KawaiiStrawberry size={48} /> },
-              { label: "Frog", el: <KawaiiFrog size={52} /> },
-              { label: "Mushroom (pink)", el: <KawaiiMushroom size={48} color="pink" /> },
-              { label: "Mushroom (mint)", el: <KawaiiMushroom size={48} color="mint" /> },
-              { label: "Star (happy)", el: <KawaiiStar size={48} mood="happy" /> },
-              { label: "Star (wink)", el: <KawaiiStar size={48} mood="wink" /> },
-              { label: "Pencil", el: <KawaiiPencil size={48} /> },
-              { label: "Book", el: <KawaiiBook size={48} /> },
-              { label: "Mushroom (purple)", el: <KawaiiMushroom size={48} color="purple" /> },
-              { label: "Cloud (sleepy)", el: <KawaiiCloud size={72} mood="sleepy" color="#E8DEFF" /> },
-              { label: "Boba (classic)", el: <KawaiiBobaCup size={52} flavor="classic" /> },
-              { label: "Strawberry (oo)", el: <KawaiiStrawberry size={48} happy={false} /> },
-            ].map(({ label, el }) => (
-              <StickyNoteCard
-                key={label}
-                color="white"
-                className="flex flex-col items-center justify-center gap-2 p-4 min-h-[120px]"
-              >
-                {el}
-                <span className="font-accent text-sm text-text-muted text-center">{label}</span>
-              </StickyNoteCard>
-            ))}
-          </div>
-        </Section>
-
-        {/* ── DECORATIONS ── */}
-        <Section id="decoratives" title="Decorations" subtitle="Sparkles, hearts, washi tape, paw prints & more">
-          <div className="flex flex-wrap gap-6 items-center">
-            <StickyNoteCard color="pink" className="flex flex-col items-center gap-2 p-4">
-              <div className="flex gap-2">
-                <Sparkle size={24} color="#FFEAA7" className="animate-kawaii-sparkle" />
-                <Sparkle size={16} color="#FFB5C8" className="animate-kawaii-sparkle" style={{ animationDelay: "0.3s" }} />
-                <Sparkle size={20} color="#C8B6FF" className="animate-kawaii-sparkle" style={{ animationDelay: "0.6s" }} />
-              </div>
-              <span className="font-accent text-sm text-text-muted">Sparkles</span>
-            </StickyNoteCard>
-
-            <StickyNoteCard color="mint" className="flex flex-col items-center gap-2 p-4">
-              <div className="flex gap-2 items-center">
-                <KawaiiHeart size={24} color="#FFB5C8" />
-                <KawaiiHeart size={18} color="#C8B6FF" />
-                <KawaiiHeart size={14} color="#FFEAA7" />
-              </div>
-              <span className="font-accent text-sm text-text-muted">Hearts</span>
-            </StickyNoteCard>
-
-            <StickyNoteCard color="lavender" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiBow size={36} color="#FFB5C8" />
-              <span className="font-accent text-sm text-text-muted">Bow</span>
-            </StickyNoteCard>
-
-            <StickyNoteCard color="butter" className="flex flex-col items-center gap-2 p-4">
-              <div className="flex gap-1.5">
-                <PawPrint size={20} color="#FFB5C8" />
-                <PawPrint size={20} color="#A8E6CF" />
-                <PawPrint size={20} color="#C8B6FF" />
-              </div>
-              <span className="font-accent text-sm text-text-muted">Paw Prints</span>
-            </StickyNoteCard>
-
-            <StickyNoteCard color="sky" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiRainbow size={80} />
-              <span className="font-accent text-sm text-text-muted">Rainbow</span>
-            </StickyNoteCard>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            <p className="font-heading font-bold text-sm text-text">Washi Tape Strips</p>
-            <div className="flex flex-col gap-3">
-              <WashiTape width={280} color="#FFB5C8" pattern="stripes" />
-              <WashiTape width={240} color="#A8E6CF" pattern="dots" />
-              <WashiTape width={200} color="#C8B6FF" pattern="plain" />
-              <WashiTape width={260} color="#FFEAA7" pattern="stripes" />
-              <WashiTape width={220} color="#B8E8FC" pattern="dots" />
-            </div>
-          </div>
-        </Section>
-
-        {/* ── BUTTONS ── */}
-        <Section id="buttons" title="Buttons" subtitle="Pill-shaped & bouncy with mascot icons">
-          <div className="flex flex-wrap gap-3 mb-6">
-            <KawaiiButton variant="pink"><KawaiiHeart size={14} /> Pink</KawaiiButton>
-            <KawaiiButton variant="mint"><KawaiiStrawberry size={18} /> Mint</KawaiiButton>
-            <KawaiiButton variant="lavender"><KawaiiStar size={18} mood="wink" /> Lavender</KawaiiButton>
-            <KawaiiButton variant="butter"><Sparkle size={14} /> Butter</KawaiiButton>
-            <KawaiiButton variant="outline">Outline</KawaiiButton>
-            <KawaiiButton variant="ghost">Ghost</KawaiiButton>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <KawaiiButton variant="pink" size="sm">Small</KawaiiButton>
-            <KawaiiButton variant="pink" size="md">Medium</KawaiiButton>
-            <KawaiiButton variant="pink" size="lg">Large</KawaiiButton>
-          </div>
-        </Section>
-
-        {/* ── STICKY NOTE CARDS ── */}
-        <Section id="cards" title="Sticky Note Cards" subtitle="Every card is a cute sticky note">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StickyNoteCard color="pink" tape tilt={-1}>
-              <div className="flex items-center gap-2 mb-2">
-                <KawaiiStrawberry size={28} />
-                <h3 className="font-heading font-bold text-lg">Pink Note</h3>
+        {/* ── PROBLEM ── */}
+        <Section id="problem" title="Teachers Are Overloaded with Administrative Work" subtitle="The current reality in education">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <StickyNoteCard color="pink" tape tilt={-1} className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiFrog size={32} />
+                <h3 className="font-heading font-bold text-lg">Manual Attendance</h3>
               </div>
               <p className="font-body text-sm text-text-muted">
-                A sakura pink sticky note! With washi tape on top. 🌸
+                Manual attendance consumes valuable time that could be spent on teaching and student interaction.
               </p>
             </StickyNoteCard>
 
-            <StickyNoteCard color="mint" tape tapeColor="#C8B6FF" tilt={1}>
-              <div className="flex items-center gap-2 mb-2">
-                <KawaiiFrog size={28} />
-                <h3 className="font-heading font-bold text-lg">Mint Note</h3>
+            <StickyNoteCard color="mint" tape tapeColor="#C8B6FF" tilt={1} className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiPencil size={32} />
+                <h3 className="font-heading font-bold text-lg">Repetitive Grading</h3>
               </div>
               <p className="font-body text-sm text-text-muted">
-                A refreshing mint note with a friendly frog. 🐸
+                Grading and reports are repetitive and tiring tasks that drain teacher energy and focus.
               </p>
             </StickyNoteCard>
 
-            <StickyNoteCard color="butter" tape tilt={-0.5}>
-              <div className="flex items-center gap-2 mb-2">
-                <KawaiiStar size={28} mood="sparkle" />
-                <h3 className="font-heading font-bold text-lg">Butter Note</h3>
+            <StickyNoteCard color="lavender" tape tilt={-0.5} className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiCloud size={32} mood="sleepy" />
+                <h3 className="font-heading font-bold text-lg">Scattered Data</h3>
               </div>
               <p className="font-body text-sm text-text-muted">
-                Warm and sunny like a butter cookie! ⭐
+                Academic data is scattered across multiple systems, making it difficult to get a complete picture.
               </p>
             </StickyNoteCard>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <StickyNoteCard color="lavender">
-              <div className="flex items-center gap-3 mb-3">
-                <KawaiiBook size={32} />
-                <div>
-                  <h3 className="font-heading font-bold">Lavender Dreams</h3>
-                  <p className="font-accent text-sm text-text-muted">No tilt, no tape — simple and sweet</p>
-                </div>
+            <StickyNoteCard color="butter" tape tapeColor="#FFB5C8" tilt={0.5} className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiShiba size={32} mood="sleepy" />
+                <h3 className="font-heading font-bold text-lg">Teacher Burnout</h3>
               </div>
               <p className="font-body text-sm text-text-muted">
-                Sometimes simplicity is the cutest thing of all. 💜
+                Teachers face burnout due to administrative overload, reducing their effectiveness in the classroom.
               </p>
             </StickyNoteCard>
-
-            <StickyNoteCard color="sky" tape tapeColor="#FFCBA4" onClick={() => alert("Clicked! ✨")}>
-              <div className="flex items-center gap-3 mb-3">
-                <KawaiiBobaCup size={32} flavor="matcha" />
-                <div>
-                  <h3 className="font-heading font-bold">Interactive Card</h3>
-                  <p className="font-accent text-sm text-text-muted">Click me! I bounce! 🧋</p>
-                </div>
-              </div>
-            </StickyNoteCard>
           </div>
         </Section>
 
-        {/* ── CLOUD STATS ── */}
-        <Section id="stats" title="Cloud Stats" subtitle="Stats float inside happy cloud containers">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <CloudStat
-              label="Students"
-              value="1,247"
-              subtitle="Across all classes"
-              cloudColor="#B8E8FC"
-            />
-            <CloudStat
-              label="Assignments"
-              value="89"
-              subtitle="Due this week"
-              cloudColor="#FFE0EA"
-            />
-            <CloudStat
-              label="Attendance"
-              value="94%"
-              subtitle="This month"
-              cloudColor="#D4F5E6"
-            />
-            <CloudStat
-              label="Gold Stars"
-              value="312"
-              subtitle="Awarded today"
-              cloudColor="#FFF5D0"
-              icon={<KawaiiStar size={18} mood="wink" />}
-            />
-          </div>
-        </Section>
-
-        {/* ── BADGES ── */}
-        <Section id="badges" title="Badges" subtitle="Candy-colored pill tags">
-          <div className="flex flex-wrap gap-3">
-            <KawaiiBadge variant="pink"><KawaiiHeart size={10} /> Favorite</KawaiiBadge>
-            <KawaiiBadge variant="mint"><Sparkle size={10} color="#7BCBA5" /> Completed</KawaiiBadge>
-            <KawaiiBadge variant="lavender">Art Class</KawaiiBadge>
-            <KawaiiBadge variant="butter">⭐ Top Student</KawaiiBadge>
-            <KawaiiBadge variant="sky">📚 Reading</KawaiiBadge>
-            <KawaiiBadge variant="peach">🎨 Creative</KawaiiBadge>
-          </div>
-        </Section>
-
-        {/* ── AVATARS ── */}
-        <Section id="avatars" title="Avatars" subtitle="Soft pastel initial rings">
-          <div className="flex items-end gap-4 flex-wrap">
-            <KawaiiAvatar name="Priya Sharma" size="lg" />
-            <KawaiiAvatar name="Rahul Verma" size="md" />
-            <KawaiiAvatar name="Anita Singh" size="sm" />
-            <KawaiiAvatar name="David Wilson" size="lg" />
-            <KawaiiAvatar name="Mary Johnson" size="md" />
-            <KawaiiAvatar name="Kenji Tanaka" size="lg" />
-          </div>
-        </Section>
-
-        {/* ── INPUTS ── */}
-        <Section id="inputs" title="Form Inputs" subtitle="Rounded pill inputs with pastel focus glow">
-          <div className="max-w-md space-y-4">
-            <KawaiiInput
-              label="Student Name 🌸"
-              placeholder="Enter student name..."
-              helperText="Full name as it appears in records"
-              icon={<KawaiiPencil size={16} />}
-            />
-            <KawaiiInput
-              label="Email 💌"
-              placeholder="teacher@school.edu"
-              type="email"
-            />
-            <KawaiiInput
-              label="Grade ⭐"
-              placeholder="e.g. 8th Grade"
-              error="Oopsie! This field is required 🥺"
-            />
-          </div>
-        </Section>
-
-        {/* ── ANIMATIONS ── */}
-        <Section id="animations" title="Animations" subtitle="Bouncy, wiggly, sparkly micro-interactions">
-          <div className="flex flex-wrap gap-4 items-center">
-            <StickyNoteCard color="pink" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiStrawberry size={40} className="animate-kawaii-bounce" />
-              <span className="font-accent text-sm text-text-muted">Bounce</span>
-            </StickyNoteCard>
-            <StickyNoteCard color="mint" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiShiba size={48} className="animate-kawaii-wiggle" />
-              <span className="font-accent text-sm text-text-muted">Wiggle</span>
-            </StickyNoteCard>
-            <StickyNoteCard color="lavender" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiBobaCup size={44} className="animate-kawaii-float" />
-              <span className="font-accent text-sm text-text-muted">Float</span>
-            </StickyNoteCard>
-            <StickyNoteCard color="butter" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiMushroom size={40} className="animate-kawaii-pop" />
-              <span className="font-accent text-sm text-text-muted">Pop</span>
-            </StickyNoteCard>
-            <StickyNoteCard color="sky" className="flex flex-col items-center gap-2 p-4">
-              <Sparkle size={32} color="#FFEAA7" className="animate-kawaii-sparkle" />
-              <span className="font-accent text-sm text-text-muted">Sparkle</span>
-            </StickyNoteCard>
-            <StickyNoteCard color="peach" className="flex flex-col items-center gap-2 p-4">
-              <KawaiiStar size={40} className="animate-kawaii-spin" />
-              <span className="font-accent text-sm text-text-muted">Spin</span>
-            </StickyNoteCard>
-          </div>
-        </Section>
-
-        {/* ── COMPOSITION ── */}
-        <Section id="composition" title="Full Composition" subtitle="How it all comes together in a teacher profile card">
-          <StickyNoteCard color="white" tape tapeColor="#C8B6FF" className="max-w-lg relative">
-            {/* Floating doodles */}
-            <div className="absolute top-2 right-3 animate-kawaii-float">
-              <KawaiiStrawberry size={24} />
-            </div>
-            <div className="absolute bottom-3 right-4 opacity-60">
-              <PawPrint size={14} color="#C8B6FF" />
-            </div>
-
-            <div className="flex items-center gap-3 mb-4">
-              <KawaiiAvatar name="Priya Sharma" size="lg" />
+        {/* ── SOLUTION ── */}
+        <Section id="solution" title="One Smart Academic Assistant" subtitle="Bringing everything together">
+          <StickyNoteCard color="sky" tape tapeColor="#A8E6CF" className="max-w-4xl mx-auto p-8">
+            <div className="flex items-center gap-4 mb-6">
+              <KawaiiBobaCup size={48} flavor="matcha" />
               <div>
-                <h3 className="font-heading font-bold">Priya Sharma</h3>
-                <p className="font-accent text-sm text-text-muted">
-                  Class 8-B · Math Teacher 📐
-                </p>
+                <h3 className="font-heading font-bold text-xl text-text">Klasso AI Solution</h3>
+                <p className="font-accent text-sm text-text-muted">Intelligent automation for modern education</p>
               </div>
-              <KawaiiBadge variant="mint" className="ml-auto">
-                <Sparkle size={10} color="#7BCBA5" /> Active
-              </KawaiiBadge>
             </div>
-
-            <WashiTape width={380} color="#FFB5C8" pattern="stripes" className="mb-4" />
-
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <CloudStat label="Students" value="32" cloudColor="#FFE0EA" />
-              <CloudStat label="Attend %" value="96" cloudColor="#D4F5E6" />
-              <CloudStat label="Rating" value="4.8" cloudColor="#E8DEFF" icon={<KawaiiStar size={14} mood="wink" />} />
-            </div>
-
-            <StickyNoteCard color="butter" className="text-sm mb-4">
-              <div className="flex items-start gap-2">
-                <KawaiiStar size={20} mood="sparkle" className="shrink-0 mt-0.5" />
-                <p className="font-body text-text-muted">
-                  Priya&apos;s class has the highest engagement score this week! ✨
-                </p>
-              </div>
-            </StickyNoteCard>
-
-            <div className="flex gap-3">
-              <KawaiiButton variant="pink" size="sm">
-                <KawaiiPencil size={14} /> View Profile
-              </KawaiiButton>
-              <KawaiiButton variant="ghost" size="sm">
-                Send Message 💌
-              </KawaiiButton>
+            <p className="font-body text-base text-text-muted leading-relaxed mb-6">
+              Klasso AI brings everything into one platform — automating routine tasks, organizing academic data, and providing intelligent insights to improve efficiency.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <KawaiiBadge variant="pink"><Sparkle size={12} /> Automated Tasks</KawaiiBadge>
+              <KawaiiBadge variant="mint"><KawaiiBook size={12} /> Organized Data</KawaiiBadge>
+              <KawaiiBadge variant="lavender"><KawaiiStar size={12} /> Smart Insights</KawaiiBadge>
             </div>
           </StickyNoteCard>
+        </Section>
+
+        {/* ── FEATURES ── */}
+        <Section id="features" title="Powerful Features" subtitle="Everything you need for academic excellence">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StickyNoteCard color="pink" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiPencil size={32} />
+                <h3 className="font-heading font-bold text-lg">Automated Attendance</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Smart attendance tracking with minimal manual input, saving hours each week.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="mint" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiStar size={32} mood="sparkle" />
+                <h3 className="font-heading font-bold text-lg">AI-Based Grading</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Intelligent grading assistance with personalized feedback suggestions.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="lavender" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiBook size={32} />
+                <h3 className="font-heading font-bold text-lg">Instant Reports</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Generate comprehensive reports in seconds, not hours.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="butter" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiCloud size={32} mood="happy" />
+                <h3 className="font-heading font-bold text-lg">Performance Analytics</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Deep insights into student performance trends and patterns.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="sky" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiBobaCup size={32} flavor="strawberry" />
+                <h3 className="font-heading font-bold text-lg">Smart Timetable</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                AI-optimized scheduling that maximizes learning efficiency.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="peach" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiMushroom size={32} color="purple" />
+                <h3 className="font-heading font-bold text-lg">Centralized Records</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                All academic data in one secure, accessible location.
+              </p>
+            </StickyNoteCard>
+          </div>
+        </Section>
+
+        {/* ── AI SECTION ── */}
+        <Section id="ai" title="Powered by Intelligent Insights" subtitle="AI that understands education">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <StickyNoteCard color="pink" tape tapeColor="#FFEAA7" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiShiba size={36} mood="excited" />
+                <h3 className="font-heading font-bold text-lg">Risk Identification</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Automatically identify students at risk of falling behind, enabling early intervention.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="mint" tape tapeColor="#C8B6FF" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiFrog size={36} />
+                <h3 className="font-heading font-bold text-lg">Trend Prediction</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Predict academic trends and performance patterns to inform teaching strategies.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="lavender" tape tapeColor="#FFB5C8" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiStrawberry size={36} />
+                <h3 className="font-heading font-bold text-lg">Instant Reports</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Generate detailed reports instantly with AI-powered analysis and insights.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="butter" tape tapeColor="#A8E6CF" className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <KawaiiStar size={36} mood="wink" />
+                <h3 className="font-heading font-bold text-lg">Actionable Recommendations</h3>
+              </div>
+              <p className="font-body text-sm text-text-muted">
+                Receive specific, actionable recommendations to improve student outcomes.
+              </p>
+            </StickyNoteCard>
+          </div>
+        </Section>
+
+        {/* ── ROLES ── */}
+        <Section id="roles" title="Built for Everyone in Education" subtitle="Different roles, one powerful platform">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StickyNoteCard color="pink" className="p-6 text-center">
+              <div className="flex justify-center mb-4">
+                <KawaiiShiba size={48} mood="happy" />
+              </div>
+              <h3 className="font-heading font-bold text-lg mb-2">👩‍🏫 Teachers</h3>
+              <p className="font-body text-sm text-text-muted">
+                Manage classes, grading, and reports with AI assistance.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="mint" className="p-6 text-center">
+              <div className="flex justify-center mb-4">
+                <KawaiiBook size={48} />
+              </div>
+              <h3 className="font-heading font-bold text-lg mb-2">🏫 Admins</h3>
+              <p className="font-body text-sm text-text-muted">
+                Monitor overall academic performance and school metrics.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="lavender" className="p-6 text-center">
+              <div className="flex justify-center mb-4">
+                <KawaiiPencil size={48} />
+              </div>
+              <h3 className="font-heading font-bold text-lg mb-2">🎓 Students</h3>
+              <p className="font-body text-sm text-text-muted">
+                Track progress, view assignments, and monitor grades.
+              </p>
+            </StickyNoteCard>
+
+            <StickyNoteCard color="butter" className="p-6 text-center">
+              <div className="flex justify-center mb-4">
+                <KawaiiHeart size={48} />
+              </div>
+              <h3 className="font-heading font-bold text-lg mb-2">👨‍👩‍👧 Parents</h3>
+              <p className="font-body text-sm text-text-muted">
+                Stay updated with reports and student progress.
+              </p>
+            </StickyNoteCard>
+          </div>
+        </Section>
+
+        {/* ── CTA ── */}
+        <Section id="cta" title="Let Teachers Focus on What Matters Most — Teaching" subtitle="Join thousands of educators already using Klasso AI">
+          <div className="text-center">
+            <StickyNoteCard color="sky" tape tapeColor="#FFB5C8" className="max-w-2xl mx-auto p-8">
+              <div className="flex justify-center mb-6">
+                <KawaiiRainbow size={80} />
+              </div>
+              <h3 className="font-heading font-bold text-2xl text-text mb-4">
+                Ready to Transform Your Classroom?
+              </h3>
+              <p className="font-body text-base text-text-muted mb-6">
+                Start your free trial today and see how Klasso AI can revolutionize your teaching experience.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/teacher">
+                  <KawaiiButton variant="pink" size="lg">
+                    <Sparkle size={20} /> Start Now
+                  </KawaiiButton>
+                </Link>
+                <KawaiiButton variant="outline" size="lg">
+                  <KawaiiBook size={20} /> Schedule Demo
+                </KawaiiButton>
+              </div>
+            </StickyNoteCard>
+          </div>
         </Section>
 
       </div>
@@ -491,7 +359,7 @@ export default function KawaiiShowcase() {
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <KawaiiShiba size={32} mood="happy" />
-            <span className="font-heading font-bold text-text">Klasso Design System</span>
+            <span className="font-heading font-bold text-text">Klasso AI</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-accent text-text-muted">Made with</span>
