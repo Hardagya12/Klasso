@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS reports (
 -- timetable_slots
 CREATE TABLE IF NOT EXISTS timetable_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
   class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
   class_subject_id UUID REFERENCES class_subjects(id) ON DELETE CASCADE,
   day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 6),
@@ -206,6 +207,17 @@ CREATE TABLE IF NOT EXISTS substitutions (
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(timetable_slot_id, date)
+);
+
+-- sub_briefings (AI-generated briefing for a substitute teacher)
+CREATE TABLE IF NOT EXISTS sub_briefings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  substitution_id UUID NOT NULL UNIQUE REFERENCES substitutions(id) ON DELETE CASCADE,
+  content JSONB NOT NULL,          -- structured class data (classInfo, topStudents, etc.)
+  ai_summary TEXT NOT NULL,        -- Claude-generated 3-paragraph narrative
+  is_viewed BOOLEAN DEFAULT FALSE,
+  viewed_at TIMESTAMPTZ,
+  generated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS assignments (
