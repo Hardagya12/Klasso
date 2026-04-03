@@ -52,6 +52,86 @@ const callClaude = (systemPrompt, userPrompt, maxTokens = 1000) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// callClaudeChat — multi-turn messages (Anthropic roles: user | assistant)
+// ─────────────────────────────────────────────────────────────────────────────
+const callClaudeChat = (systemPrompt, claudeMessages, maxTokens = 1200) => {
+  return new Promise((resolve, reject) => {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return reject(new Error('ANTHROPIC_API_KEY is not set'));
+    }
+    const body = JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: claudeMessages,
+    });
+
+    const options = {
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': VERSION,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) return reject(new Error(parsed.error.message || 'Anthropic API error'));
+          const text = parsed.content?.[0]?.text || '';
+          resolve(text);
+        } catch (e) {
+          reject(new Error('Failed to parse Anthropic response'));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+};
+
+/**
+ * Klasso Buddy — tutoring chat for students (and parents/teachers asking study questions).
+ * @param {{role:string, content:string}[]} messages
+ * @param {{name?: string, role?: string}} context
+ */
+const chatStudentBuddy = async (messages, context = {}) => {
+  const { name = 'Student', role: userRole = 'student' } = context;
+  const systemPrompt = `You are Klasso Buddy, a friendly study assistant for schools in India (CBSE/ICSE and state boards).
+- Explain clearly and briefly; use examples when helpful.
+- Do not write full solutions for what is clearly graded homework—give hints and guide thinking instead.
+- Keep most answers under ~350 words unless the user asks for depth.
+- The user's display name is ${name}. Account role: ${userRole}.`;
+
+  const claudeMsgs = (messages || [])
+    .filter((m) => m && typeof m.content === 'string' && m.content.trim())
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content.trim(),
+    }))
+    .slice(-24);
+
+  if (!claudeMsgs.length) {
+    throw new Error('At least one message with content is required');
+  }
+
+  if (claudeMsgs[0].role !== 'user') {
+    claudeMsgs.unshift({ role: 'user', content: 'Hi' });
+  }
+
+  return callClaudeChat(systemPrompt, claudeMsgs, 1500);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // generateStudentReport
 // ─────────────────────────────────────────────────────────────────────────────
 const generateStudentReport = async (studentData) => {
@@ -147,4 +227,9 @@ Provide feedback in this exact format:
   return callClaude(systemPrompt, userPrompt, 600);
 };
 
-module.exports = { generateStudentReport, generateLessonPlan, generateAIFeedback };
+module.exports = {
+  generateStudentReport,
+  generateLessonPlan,
+  generateAIFeedback,
+  chatStudentBuddy,
+};

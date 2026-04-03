@@ -108,7 +108,7 @@ const login = async (req, res, next) => {
 const getMe = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, name, email, role, school_id, phone, avatar_url, is_active, last_login, created_at
+      `SELECT id, name, email, role, school_id, phone, avatar_url, is_active, last_login, settings, created_at
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -127,7 +127,7 @@ const getMe = async (req, res, next) => {
  */
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, avatar_url } = req.body;
+    const { name, phone, avatar_url, settings } = req.body;
     const updates = [];
     const params = [];
     let idx = 1;
@@ -135,6 +135,13 @@ const updateProfile = async (req, res, next) => {
     if (name !== undefined) { updates.push(`name = $${idx++}`); params.push(name); }
     if (phone !== undefined) { updates.push(`phone = $${idx++}`); params.push(phone); }
     if (avatar_url !== undefined) { updates.push(`avatar_url = $${idx++}`); params.push(avatar_url); }
+    if (settings !== undefined) {
+      if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) {
+        return sendError(res, 'settings must be a JSON object', 400);
+      }
+      updates.push(`settings = COALESCE(settings, '{}'::jsonb) || $${idx++}::jsonb`);
+      params.push(JSON.stringify(settings));
+    }
 
     if (updates.length === 0) {
       return sendError(res, 'No fields to update', 400);
@@ -144,7 +151,7 @@ const updateProfile = async (req, res, next) => {
 
     const result = await query(
       `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}
-       RETURNING id, name, email, role, school_id, phone, avatar_url, is_active, last_login, created_at`,
+       RETURNING id, name, email, role, school_id, phone, avatar_url, is_active, last_login, settings, created_at`,
       params
     );
 

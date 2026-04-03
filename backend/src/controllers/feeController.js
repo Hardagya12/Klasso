@@ -19,12 +19,12 @@ const getFeeTypes = async (req, res, next) => {
 // ─── POST /api/fees/types ─────────────────────────────────────────────────────
 const createFeeType = async (req, res, next) => {
   try {
-    const { name, amount, description = null, frequency = 'one-time' } = req.body;
+    const { name, amount, due_date = null, academic_year_id = null } = req.body;
     const school_id = req.user.school_id;
     const result = await query(
-      `INSERT INTO fee_types (school_id, name, amount, description, frequency)
+      `INSERT INTO fee_types (school_id, name, amount, due_date, academic_year_id)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [school_id, name, amount, description, frequency]
+      [school_id, name, amount, due_date, academic_year_id]
     );
     return sendSuccess(res, result.rows[0], 'Fee type created', 201);
   } catch (err) { next(err); }
@@ -35,6 +35,19 @@ const getStudentFeeStatus = async (req, res, next) => {
   try {
     const { id: student_id } = req.params;
     const school_id = req.user.school_id;
+
+    if (req.user.role === 'student') {
+      const own = await query('SELECT id FROM students WHERE user_id=$1', [req.user.id]);
+      if (!own.rows.length || own.rows[0].id !== student_id) {
+        return sendError(res, 'Forbidden', 403);
+      }
+    } else if (req.user.role === 'parent') {
+      const link = await query(
+        'SELECT 1 FROM student_parents WHERE student_id=$1 AND parent_id=$2',
+        [student_id, req.user.id]
+      );
+      if (!link.rows.length) return sendError(res, 'Forbidden', 403);
+    }
 
     const result = await query(
       `SELECT ft.id AS fee_type_id, ft.name, ft.amount,
@@ -75,12 +88,12 @@ const getPendingFees = async (req, res, next) => {
 // ─── POST /api/fees/payment ──────────────────────────────────────────────────
 const recordPayment = async (req, res, next) => {
   try {
-    const { student_id, fee_type_id, amount_paid, payment_method = 'cash', notes = null } = req.body;
+    const { student_id, fee_type_id, amount_paid, payment_method = 'cash', transaction_id = null } = req.body;
 
     const result = await query(
-      `INSERT INTO fee_payments (student_id, fee_type_id, amount_paid, payment_method, notes, received_by)
+      `INSERT INTO fee_payments (student_id, fee_type_id, amount_paid, payment_method, transaction_id, recorded_by)
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [student_id, fee_type_id, amount_paid, payment_method, notes, req.user.id]
+      [student_id, fee_type_id, amount_paid, payment_method, transaction_id, req.user.id]
     );
     const payment = result.rows[0];
 
@@ -103,12 +116,12 @@ const recordPayment = async (req, res, next) => {
 const getPaymentById = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT fp.*, ft.name AS fee_name, u.name AS student_name, ru.name AS received_by_name
+      `SELECT fp.*, ft.name AS fee_name, u.name AS student_name, ru.name AS recorded_by_name
        FROM fee_payments fp
        JOIN fee_types ft ON ft.id = fp.fee_type_id
        JOIN students st ON st.id = fp.student_id
        JOIN users u ON u.id = st.user_id
-       JOIN users ru ON ru.id = fp.received_by
+       LEFT JOIN users ru ON ru.id = fp.recorded_by
        WHERE fp.id = $1`,
       [req.params.id]
     );

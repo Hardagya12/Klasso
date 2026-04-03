@@ -16,7 +16,7 @@ const getStudentDocuments = async (req, res, next) => {
     const result = await query(
       `SELECT d.*, u.name AS issued_by_name FROM documents d
        LEFT JOIN users u ON u.id=d.issued_by
-       WHERE d.student_id=$1 ORDER BY d.created_at DESC`,
+       WHERE d.student_id=$1 ORDER BY d.generated_at DESC`,
       [student_id]
     );
     return sendSuccess(res, result.rows);
