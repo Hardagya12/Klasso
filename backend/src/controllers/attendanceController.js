@@ -4,6 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 const { query } = require('../db/neon');
 const { sendSuccess, sendError } = require('../utils/response');
 const { createNotification, createNotificationsForMany } = require('../utils/notificationHelper');
+const streakService = require('../utils/streakService');
+const classXpService = require('../utils/classXpService');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal: checkAndNotifyLowAttendance
@@ -129,6 +131,9 @@ const markAttendance = async (req, res, next) => {
     if (!sessCheck.rows.length) return sendError(res, 'Session not found', 404);
     const resolvedClassId = sessCheck.rows[0].class_id;
 
+
+    const today = new Date().toISOString().split('T')[0];
+
     for (const r of records) {
       await query(
         `INSERT INTO attendance_records (session_id, student_id, status, remark)
@@ -137,10 +142,20 @@ const markAttendance = async (req, res, next) => {
            SET status = EXCLUDED.status, remark = EXCLUDED.remark`,
         [sid, r.student_id, r.status, r.remark || null]
       );
+      
+      // Update streak asynchronously
+      streakService.updateStreak(r.student_id, today, r.status).catch(err => {
+        console.error('Streak update failed for', r.student_id, err);
+      });
     }
 
     // Fire-and-forget low attendance check
     checkAndNotifyLowAttendance(resolvedClassId);
+
+    // Fire-and-forget class XP calculation
+    classXpService.checkAndAwardDailyXP(resolvedClassId, today, req.user.id).catch(err => {
+      console.error('Class XP async check failed', err);
+    });
 
     return sendSuccess(res, {
       marked: records.length,
