@@ -4,23 +4,36 @@ const router = require('express').Router();
 const { authenticateJWT, authorizeRole } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const {
-  getAllExams, getExamById, createExam, updateExam, deleteExam,
-  enterMarks, getExamMarks, getExamResult,
+  getExams, getExamById, createExam, updateExam, deleteExam,
+  addSubjectToExam, removeSubjectFromExam, getExamSchedule,
 } = require('../controllers/examController');
 
 router.use(authenticateJWT);
 
-router.get('/', getAllExams);
+router.get('/',    getExams);
 router.get('/:id', getExamById);
-router.post('/', authorizeRole('admin'), validateBody(['class_id','name']), createExam);
-router.put('/:id', authorizeRole('admin'), updateExam);
-router.delete('/:id', authorizeRole('admin'), deleteExam);
 
-// Marks
-router.post('/:id/marks', authorizeRole('teacher','admin'), validateBody(['exam_subject_id','marks']), enterMarks);
-router.get('/:id/marks', getExamMarks);
+router.post(
+  '/',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['name', 'class_id']),
+  createExam
+);
 
-// Full result card
-router.get('/:id/result', getExamResult);
+router.put('/:id',    authorizeRole('teacher', 'admin'), updateExam);
+router.delete('/:id', authorizeRole('admin'),            deleteExam);
+
+// Exam subjects
+router.post(
+  '/:id/subjects',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['subject_id']),
+  addSubjectToExam
+);
+
+router.delete('/:examId/subjects/:subjectId', authorizeRole('admin'), removeSubjectFromExam);
+
+// Exam schedule / countdown
+router.get('/:id/schedule', getExamSchedule);
 
 module.exports = router;
