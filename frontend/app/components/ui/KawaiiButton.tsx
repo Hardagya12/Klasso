@@ -41,6 +41,7 @@ export function KawaiiButton({
   return (
     <button
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      suppressHydrationWarning
       {...props}
     >
       {children}

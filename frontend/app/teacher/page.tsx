@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
   PencilSVG, SquigglySVG, StarburstSVG, CircleRingSVG,
   DashboardStatCard,
@@ -13,6 +14,7 @@ import NotificationPanel from "../components/NotificationPanel";
 import OnboardingModal from "../components/OnboardingModal";
 
 export default function TeacherDashboard() {
+  const router = useRouter();
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [showOnboarding, setShowOnboarding] = React.useState(true);
 
@@ -140,9 +142,11 @@ export default function TeacherDashboard() {
                       border: slot.past ? "none" : "2px solid #2C2A24",
                       backgroundColor: slot.past ? "#E8E4D9" : "#F5A623",
                       color: slot.past ? "#7A7670" : "#2C2A24",
-                      cursor: "pointer",
+                      cursor: slot.past ? "default" : "pointer",
                       boxShadow: slot.past ? "none" : "2px 2px 0px #2C2A24",
-                    }}>{slot.past ? "Marked ✓" : "Take Attendance"}</button>
+                    }}
+                    onClick={() => !slot.past && router.push("/teacher/attendance")}
+                    >{slot.past ? "Marked ✓" : "Take Attendance"}</button>
                   </div>
                 ))}
               </div>

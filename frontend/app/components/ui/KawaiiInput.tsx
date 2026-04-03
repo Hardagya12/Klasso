@@ -42,6 +42,7 @@ export function KawaiiInput({
             ${icon ? "pl-11" : ""}
             ${className}
           `}
+          suppressHydrationWarning
           {...props}
         />
       </div>
