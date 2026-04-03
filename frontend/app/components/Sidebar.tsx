@@ -43,7 +43,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
     { label: "Teachers", path: "/admin/teachers", icon: <PeopleDoodle size={20}/> },
     { label: "Students", path: "/admin/students", icon: <PeopleDoodle size={20}/> },
     { label: "Timetable", path: "/admin/timetable", icon: <GridDoodle size={20}/> },
-    { label: "Reports", path: "/admin/report-generator", icon: <ReportDoodle size={20}/> },
+    { label: "Reports", path: "/admin/reports", icon: <ReportDoodle size={20}/> },
     { label: "Attendance", path: "/admin/attendance", icon: <AttendanceDoodle size={20}/> },
     { label: "Fee Management", path: "/admin/fees", icon: <ChartDoodle size={20}/> },
     { label: "Announcements", path: "/admin/announcements", icon: <MessageDoodle size={20}/> },
@@ -51,14 +51,14 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
 
   // Teacher navigation items
   const teacherNavItems = [
-    { label: "Dashboard", path: "/dashboard", icon: <HouseDoodle size={20}/> },
-    { label: "Attendance", path: "/attendance", icon: <AttendanceDoodle size={20}/> },
-    { label: "Grades", path: "/grades", icon: <ChartDoodle size={20}/> },
-    { label: "Reports", path: "/report-generator", icon: <ReportDoodle size={20}/> },
-    { label: "Assignments", path: "/assignments", icon: <StackDoodle size={20}/> },
-    { label: "Timetable", path: "/timetable", icon: <GridDoodle size={20}/> },
-    { label: "Messages", path: "/messages", icon: <MessageDoodle size={20}/> },
-    { label: "Students", path: "/students", icon: <PeopleDoodle size={20}/> },
+    { label: "Dashboard", path: "/teacher", icon: <HouseDoodle size={20}/> },
+    { label: "Attendance", path: "/teacher/attendance", icon: <AttendanceDoodle size={20}/> },
+    { label: "Grades", path: "/teacher/grades", icon: <ChartDoodle size={20}/> },
+    { label: "Reports", path: "/teacher/reports", icon: <ReportDoodle size={20}/> },
+    { label: "Assignments", path: "/teacher/assignments", icon: <StackDoodle size={20}/> },
+    { label: "Timetable", path: "/teacher/timetable", icon: <GridDoodle size={20}/> },
+    { label: "Messages", path: "/teacher/messages", icon: <MessageDoodle size={20}/> },
+    { label: "Students", path: "/teacher/students", icon: <PeopleDoodle size={20}/> },
   ];
 
   const navItems = isAdmin ? adminNavItems : teacherNavItems;

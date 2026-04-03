@@ -190,7 +190,7 @@ export default function TimetableBuilderPage() {
       <AdminSidebar />
       
       {/* ── MAIN CONTENT ── */}
-      <div className="flex-1 flex flex-col min-w-0 z-10 relative ml-[210px]">
+      <div className="flex-1 flex flex-col min-w-0 z-10 relative ml-[240px]">
         
         {/* ── TOP HEADER ── */}
         <header className="h-[80px] shrink-0 border-b-2 border-[#E8E4D9] bg-white px-8 flex justify-between items-center shadow-sm">

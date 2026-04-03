@@ -26,7 +26,7 @@ export default function TeacherDashboard() {
       <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
 
       {/* ─── MAIN AREA ─── */}
-      <main style={{ flex: 1, marginLeft: 210, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, marginLeft: 240, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <header style={{
           height: 64, borderBottom: "2px solid #E8E4D9", backgroundColor: "#FFFFFF",

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../../components/Sidebar";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Plus, ChevronRight, Eye, Mail, MoreVertical } from "lucide-react";
 

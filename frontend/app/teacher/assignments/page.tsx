@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../../components/Sidebar";
 
-export default function TimetablePage() {
+export default function AssignmentsPage() {
   return (
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
       <Sidebar />
@@ -13,16 +13,16 @@ export default function TimetablePage() {
           <div>
             <h1 className="text-4xl font-extrabold text-[#2C2A24]"
               style={{ fontFamily: '"Nunito", sans-serif' }}>
-              Timetable
+              Assignments
             </h1>
             <p className="text-[#7A7670] font-body mt-2 text-sm">
-              View and manage your class schedule
+              Create and manage assignments for your classes
             </p>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border-2 border-[#E8E4D9] p-8 shadow-sm">
-          <p className="text-[#7A7670]">Timetable interface coming soon...</p>
+          <p className="text-[#7A7670]">Assignments management interface coming soon...</p>
         </div>
       </main>
     </div>

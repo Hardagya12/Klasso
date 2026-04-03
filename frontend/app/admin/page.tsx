@@ -302,7 +302,7 @@ export default function AdminDashboard() {
       <AdminSidebar />
 
       {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col z-10 min-w-0 h-full ml-[210px]">
+      <div className="flex-1 flex flex-col z-10 min-w-0 h-full ml-[240px]">
         
         {/* ── TOP HEADER ── */}
         <header className="h-[80px] shrink-0 border-b-2 border-[#E8E4D9] bg-white px-8 flex justify-between items-center shadow-sm relative z-20">
