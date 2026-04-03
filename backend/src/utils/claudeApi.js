@@ -242,10 +242,51 @@ Please provide the 2-sentence note.`;
   return callClaude(systemPrompt, userPrompt, 200);
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateTimeCapsuleNarrative
+// ─────────────────────────────────────────────────────────────────────────────
+const generateTimeCapsuleNarrative = async (aggregatedData) => {
+  const systemPrompt = `You are a warm, celebratory school AI generating an end-of-year summary for a student.
+Be specific, warm, and celebratory. Use the actual numbers.
+Output MUST be valid JSON, containing exactly these keys:
+{
+  "headline": "5-7 word punchy headline about their year (e.g., 'The Year Mihir Found His Rhythm')",
+  "highlight": "2 sentence biggest achievement of the year based on the data",
+  "growthStory": "2 sentence story about their most notable improvement",
+  "funFact": "1 fun/quirky stat fact (e.g., 'You spent 4.2 hours chatting with AI Study Buddy')",
+  "teacherNote": "1 warm sentence a teacher would say about them",
+  "emoji": "single most fitting emoji for their year"
+}`;
+
+  const userPrompt = `Student Data:\n${JSON.stringify(aggregatedData)}\nGenerate the JSON.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, 500);
+    // Parse json
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error("AI Time Capsule Gen Error - returning defaults", error);
+    return {
+      headline: "An Incredible Year of Growth!",
+      highlight: "You've worked super hard and consistently pushed yourself to learn more.",
+      growthStory: "You turned challenges into stepping stones and never gave up.",
+      funFact: "You logged into Klasso more times than we could count!",
+      teacherNote: "I am incredibly proud of everything you accomplished.",
+      emoji: "🌟"
+    };
+  }
+};
+
 module.exports = {
   generateStudentReport,
   generateLessonPlan,
   generateAIFeedback,
   chatStudentBuddy,
   generateMoodAlertMessage,
+  generateTimeCapsuleNarrative,
 };

@@ -6,6 +6,7 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { createNotification, createNotificationsForMany } = require('../utils/notificationHelper');
 const streakService = require('../utils/streakService');
 const classXpService = require('../utils/classXpService');
+const questService = require('../utils/questService');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal: checkAndNotifyLowAttendance
@@ -146,6 +147,11 @@ const markAttendance = async (req, res, next) => {
       // Update streak asynchronously
       streakService.updateStreak(r.student_id, today, r.status).catch(err => {
         console.error('Streak update failed for', r.student_id, err);
+      });
+
+      // Check quest completions asynchronously
+      questService.checkQuestCompletions(r.student_id, 'attendance').catch(err => {
+        console.error('[questService] attendance trigger error:', err.message);
       });
     }
 

@@ -6,7 +6,7 @@ import { apiData } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   KlassoScreen, StatCard, KlassoCard, KlassoBadge, KlassoButton, KlassoAvatar,
-  DoodleCheckCircle, DoodleStar, DoodlePencil, DoodleBook, DoodleLeaf, DoodleLightbulb,
+  DoodleCheckCircle, DoodleStar, DoodlePencil, DoodleBook, DoodleLeaf, DoodleLightbulb, DoodleSparkle,
   Colors, Fonts,
 } from '@/src/components';
 import { ClassXPWidget } from '@/src/components/ClassXPWidget';
@@ -179,6 +179,22 @@ export default function HomeScreen() {
             </KlassoCard>
           </TouchableOpacity>
         )}
+
+        {/* ─── TIME CAPSULE WIDGET ───────────────────────── */}
+        <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/timecapsule')}>
+          <KlassoCard style={{ marginBottom: 20, backgroundColor: '#1C2B27', borderColor: '#3ECFB2' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <DoodleSparkle size={32} color="#3ECFB2" />
+              <View style={{ marginLeft: 16, flex: 1 }}>
+                <Text style={{ fontFamily: Fonts.heading, fontSize: 18, color: '#FFF' }}>Your Year In Review</Text>
+                <Text style={{ fontFamily: Fonts.body, fontSize: 13, color: '#A1A1AA', marginTop: 2 }}>Ready to open? See your stats!</Text>
+              </View>
+              <View style={{ backgroundColor: '#3ECFB2', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100 }}>
+                <Text style={{ fontFamily: Fonts.heading, color: '#1C2B27', fontSize: 13, fontWeight: '800' }}>Open</Text>
+              </View>
+            </View>
+          </KlassoCard>
+        </TouchableOpacity>
 
         <ClassXPWidget />
         <StreakWidget />
