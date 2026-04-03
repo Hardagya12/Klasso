@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { AuthProvider } from '@/contexts/AuthContext';
 import {
   useFonts,
   Nunito_700Bold,
@@ -45,9 +46,10 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <>
+    <AuthProvider>
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="login" options={{ gestureEnabled: false }} />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="parent/index" options={{ animation: 'slide_from_right' }} />
@@ -57,6 +59,6 @@ export default function RootLayout() {
         <Stack.Screen name="parent/settings" options={{ animation: 'slide_from_right' }} />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </AuthProvider>
   );
 }

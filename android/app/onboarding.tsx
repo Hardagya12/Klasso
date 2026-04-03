@@ -253,7 +253,7 @@ export default function Onboarding() {
       flatRef.current?.scrollToIndex({ index: current + 1 });
       setCurrent(current + 1);
     } else {
-      router.replace('/(tabs)');
+      router.replace('/login');
     }
   };
 
@@ -262,7 +262,7 @@ export default function Onboarding() {
       {/* Skip button */}
       <TouchableOpacity
         style={styles.skipBtn}
-        onPress={() => router.replace('/(tabs)')}
+        onPress={() => router.replace('/login')}
       >
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
@@ -311,10 +311,10 @@ export default function Onboarding() {
                       label="Let's Go!"
                       variant="primary"
                       size="lg"
-                      onPress={() => router.replace('/(tabs)')}
+                      onPress={() => router.replace('/login')}
                       style={{ width: W - 64, alignSelf: 'center' }}
                     />
-                    <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 14, alignItems: 'center' }}>
+                    <TouchableOpacity onPress={() => router.replace('/login')} style={{ marginTop: 14, alignItems: 'center' }}>
                       <Text style={styles.loginText}>
                         Already have an account?{' '}
                         <Text style={{ color: Colors.coral }}>Log in</Text>

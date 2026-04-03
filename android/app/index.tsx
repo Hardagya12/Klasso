@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
+import { getToken } from '@/lib/api';
 import {
   Colors, Fonts,
   DoodleStarburst, DoodleCloud, DoodleSparkle, DoodleRocket,
@@ -32,10 +33,13 @@ export default function SplashScreen() {
       createBounce(anim3, 300),
     ]).start();
 
-    // Navigate to onboarding after 2.5 seconds
     const timer = setTimeout(() => {
-      router.replace('/onboarding');
-    }, 2500);
+      void (async () => {
+        const t = await getToken();
+        if (t) router.replace('/(tabs)');
+        else router.replace('/login');
+      })();
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [anim1, anim2, anim3]);
