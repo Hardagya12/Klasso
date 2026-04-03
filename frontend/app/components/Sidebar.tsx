@@ -43,7 +43,7 @@ export default function Sidebar() {
     { label: "Teachers", path: "/admin/teachers", icon: <PeopleDoodle size={20}/> },
     { label: "Students", path: "/admin/students", icon: <PeopleDoodle size={20}/> },
     { label: "Timetable", path: "/admin/timetable", icon: <GridDoodle size={20}/> },
-    { label: "Reports", path: "/admin/reports", icon: <ReportDoodle size={20}/> },
+    { label: "Reports", path: "/admin/report-generator", icon: <ReportDoodle size={20}/> },
     { label: "Attendance", path: "/admin/attendance", icon: <AttendanceDoodle size={20}/> },
     { label: "Fee Management", path: "/admin/fees", icon: <ChartDoodle size={20}/> },
     { label: "Announcements", path: "/admin/announcements", icon: <MessageDoodle size={20}/> },
