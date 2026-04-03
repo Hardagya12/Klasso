@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Sidebar from "../components/Sidebar";
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES
@@ -208,7 +209,9 @@ export default function ReportGeneratorPage() {
   const approvedCount = 12;
 
   return (
-    <div className="flex min-h-screen bg-[#FDFBF5] pl-6" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+    <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+      <Sidebar />
+
       {/* ── DECORATIVE ELEMENTS ── */}
       <NotebookSpiral height={1500} />
       <CornerDiamonds />
@@ -219,7 +222,7 @@ export default function ReportGeneratorPage() {
       <div className="fixed bottom-40 left-[400px] z-0 opacity-30"><GoldStarSmall size={18} color="#E8534A"/></div>
       
       {/* Main Container */}
-      <main className="flex-1 ml-[70px] pr-10 py-10 relative z-10 max-w-7xl mx-auto flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 ml-[240px] pr-10 py-10 relative z-10 max-w-7xl mx-auto flex flex-col h-screen overflow-hidden">
         
         {/* ════════════════════════════════
             PAGE HEADER

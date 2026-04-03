@@ -8,24 +8,7 @@ import {
   LightbulbDoodle, NotebookTexture, ScatteredDoodles,
   StickerStar, StickerApple, RulerPencilDoodle,
 } from "../components/dashboard/DashboardComponents";
-
-// ── Sidebar nav item ──
-const SidebarItem = ({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) => (
-  <div style={{
-    display: "flex", alignItems: "center", gap: "12px",
-    padding: "10px 16px", borderRadius: "12px", cursor: "pointer",
-    border: active ? "2px solid #F5A623" : "2px solid transparent",
-    backgroundColor: active ? "#FEF3DC" : "transparent",
-    boxShadow: active ? "2px 2px 0px #2C2A24" : "none",
-    transition: "all 0.15s",
-  }}>
-    <span style={{ color: active ? "#F5A623" : "#7A7670" }}>{icon}</span>
-    <span style={{
-      fontFamily: '"Nunito", sans-serif', fontWeight: 700,
-      color: active ? "#2C2A24" : "#7A7670", fontSize: "14px",
-    }}>{label}</span>
-  </div>
-);
+import Sidebar from "../components/Sidebar";
 
 export default function TeacherDashboard() {
   return (
@@ -33,72 +16,7 @@ export default function TeacherDashboard() {
       <NotebookTexture />
       <ScatteredDoodles />
 
-      {/* ─── LEFT SIDEBAR ─── */}
-      <aside style={{
-        width: 240, flexShrink: 0, position: "fixed", top: 0, left: 0, height: "100vh",
-        borderRight: "2px solid #E8E4D9", backgroundColor: "#FFFFFF",
-        display: "flex", flexDirection: "column", padding: "24px 20px",
-        zIndex: 50, overflowY: "auto",
-      }}>
-        {/* Notebook margin line */}
-        <div style={{ position: "absolute", left: 40, top: 0, bottom: 0, width: 1, backgroundColor: "#F5A623", opacity: 0.2 }}/>
-
-        {/* Logo */}
-        <div style={{ marginBottom: 28, position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <PencilSVG size={26}/>
-            <h1 style={{ fontFamily: '"Nunito", sans-serif', fontWeight: 900, fontSize: 22, margin: 0, color: "#2C2A24" }}>
-              Klasso
-            </h1>
-          </div>
-          <SquigglySVG width={80} color="#F5A623"/>
-        </div>
-
-        {/* Teacher avatar */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28, textAlign: "center" }}>
-          <div style={{ position: "relative", width: 64, height: 64, marginBottom: 10 }}>
-            <CircleRingSVG size={64}/>
-            <div style={{
-              position: "absolute", top: 4, left: 4, width: 56, height: 56, borderRadius: "50%",
-              backgroundColor: "#FEF3DC", border: "2px solid #2C2A24",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: 18, color: "#2C2A24",
-            }}>PS</div>
-          </div>
-          <p style={{ fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: 14, margin: "0 0 2px", color: "#2C2A24" }}>Priya Sharma</p>
-          <p style={{ fontFamily: '"Caveat", cursive', fontSize: 14, color: "#7A7670", margin: 0 }}>Grade 8 · Math &amp; Science</p>
-        </div>
-
-        {/* Nav */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-          <SidebarItem label="Dashboard"   active icon={<HouseDoodle size={20}/>}/>
-          <SidebarItem label="Attendance"        icon={<AttendanceDoodle size={20}/>}/>
-          <SidebarItem label="Grades"            icon={<ChartDoodle size={20}/>}/>
-          <SidebarItem label="Reports"           icon={<ReportDoodle size={20}/>}/>
-          <SidebarItem label="Assignments"       icon={<StackDoodle size={20}/>}/>
-          <SidebarItem label="Timetable"         icon={<GridDoodle size={20}/>}/>
-          <SidebarItem label="Messages"          icon={<MessageDoodle size={20}/>}/>
-          <SidebarItem label="Students"          icon={<PeopleDoodle size={20}/>}/>
-        </div>
-
-        {/* AI Assistant + Ruler/Pencil */}
-        <div style={{ borderTop: "2px solid #E8E4D9", paddingTop: 20, marginTop: 16 }}>
-          <button style={{
-            width: "100%", backgroundColor: "#F5A623", border: "2px solid #2C2A24",
-            borderRadius: 12, padding: "12px 0", cursor: "pointer",
-            fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: 14, color: "#2C2A24",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            boxShadow: "4px 4px 0px #2C2A24", position: "relative", overflow: "hidden",
-            transition: "all 0.15s",
-          }}>
-            <LightbulbDoodle size={20}/>
-            AI Assistant
-          </button>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 12, opacity: 0.55 }}>
-            <RulerPencilDoodle size={48}/>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* ─── MAIN AREA ─── */}
       <main style={{ flex: 1, marginLeft: 240, display: "flex", flexDirection: "column" }}>

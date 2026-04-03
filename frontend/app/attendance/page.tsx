@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Sidebar from "../components/Sidebar";
 
 // ═══════════════════════════════════════════════
 //  INLINE SVG DOODLES
@@ -540,6 +541,8 @@ export default function AttendancePage() {
 
   return (
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+      <Sidebar />
+
       {/* Notebook spiral — left edge */}
       <div className="fixed left-[240px] top-0 bottom-0 z-30 pointer-events-none">
         <NotebookSpiralDoodle height={2000}/>

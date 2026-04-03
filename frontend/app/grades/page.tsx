@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Sidebar from "../components/Sidebar";
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES
@@ -338,6 +339,7 @@ export default function GradesFeedbackPage() {
 
   return (
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+      <Sidebar />
 
       {/* ── BIG PENCIL DECOR ── */}
       <div className="fixed right-4 top-1/2 -translate-y-1/2 z-0 pointer-events-none">
