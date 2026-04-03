@@ -75,6 +75,7 @@ model User {
   documentsGenerated         Document[]           @relation("DocumentGeneratedBy")
   questsCreated              Quest[]              @relation("QuestTeacher")
   duelsCreated               Duel[]               @relation("DuelTeacher")
+  moodAlerts                 MoodAlert[]          @relation("MoodAlertTeacher")
 
   @@index([schoolId], map: "idx_users_school")
   @@index([role], map: "idx_users_role")
@@ -155,6 +156,8 @@ model Student {
   quests             Quest[]            @relation("QuestStudent")
   questCompletions   QuestCompletion[]
   duelSessions       DuelSession[]
+  moodCheckIns       MoodCheckIn[]
+  moodAlerts         MoodAlert[]
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -796,6 +799,51 @@ model DuelSession {
 
   @@unique([duelId, studentId])
   @@map("duel_sessions")
+}
+
+// ── Mood Wellbeing Engine ────────────────────────────────────────────────────────
+
+enum MoodLevel {
+  GREAT
+  GOOD
+  OKAY
+  SAD
+  STRESSED
+}
+
+enum MoodAlertType {
+  CONSECUTIVE_LOW
+  SUDDEN_DROP
+  WEEKLY_PATTERN
+}
+
+model MoodCheckIn {
+  id        String    @id @default(cuid())
+  studentId String    @map("student_id") @db.Uuid
+  mood      MoodLevel
+  note      String?
+  date      DateTime  @db.Date
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@map("mood_checkins")
+}
+
+model MoodAlert {
+  id          String        @id @default(cuid())
+  studentId   String        @map("student_id") @db.Uuid
+  teacherId   String        @map("teacher_id") @db.Uuid
+  alertType   MoodAlertType @map("alert_type")
+  message     String
+  isRead      Boolean       @default(false) @map("is_read")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher     User          @relation("MoodAlertTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("mood_alerts")
 }
 
 model DuelAnswer {
