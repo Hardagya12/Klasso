@@ -31,14 +31,24 @@ const analyticsRoutes = require('./src/routes/analytics');
 const studyMaterialRoutes = require('./src/routes/studyMaterials');
 const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
+const aiRoutes = require('./src/routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Global Middleware ──────────────────────────────────────────────────────────
 app.use(helmet());
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (corsOrigins.includes('*')) return callback(null, true);
+    if (corsOrigins.some((o) => o === origin)) return callback(null, true);
+    return callback(null, false);
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -71,6 +81,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/study-materials', studyMaterialRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
