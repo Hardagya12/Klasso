@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import AdminSidebar from "../components/ui/AdminSidebar";
+import SchoolXPLeaderboard from "../components/SchoolXPLeaderboard";
 import { apiData } from "../../lib/api";
 import { useAuth } from "../providers";
 
@@ -441,6 +442,9 @@ export default function AdminDashboard() {
             
           </div>
           
+          {/* ════ SCHOOL XP LEADERBOARD ════ */}
+          <SchoolXPLeaderboard />
+
           {/* ════ ROW 3: At-Risk, Activity, Quick Actions ════ */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
