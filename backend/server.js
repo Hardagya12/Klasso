@@ -69,6 +69,7 @@ app.get('/health', (req, res) => {
 });
 
 const streakRoutes = require('./src/routes/streak');
+const moodRoutes = require('./src/routes/mood');
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -96,6 +97,7 @@ app.use('/api/streak', streakRoutes);
 app.use('/api/xp', xpRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/duels', duelRoutes);
+app.use('/api/mood', moodRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
