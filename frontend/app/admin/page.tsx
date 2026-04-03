@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidebar from "../components/Sidebar";
+import AdminSidebar from "../components/ui/AdminSidebar";
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES - ICONS & DECORATIONS
@@ -299,10 +299,10 @@ export default function AdminDashboard() {
       <div className="fixed bottom-64 right-[400px] z-0 opacity-60"><MutedAmberStarburst size={90} /></div>
 
       {/* ── SIDEBAR ── */}
-      <Sidebar />
+      <AdminSidebar />
 
       {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col z-10 min-w-0 h-full ml-[240px]">
+      <div className="flex-1 flex flex-col z-10 min-w-0 h-full ml-[210px]">
         
         {/* ── TOP HEADER ── */}
         <header className="h-[80px] shrink-0 border-b-2 border-[#E8E4D9] bg-white px-8 flex justify-between items-center shadow-sm relative z-20">
