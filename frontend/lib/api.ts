@@ -71,6 +71,16 @@ export async function apiData<T>(path: string, init: RequestInit = {}): Promise<
   return json.data as T;
 }
 
+/** Fire-and-forget fetch (POST/DELETE) — throws on non-OK, returns Response. */
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const res = await rawFetch(path, init, true);
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(json.message || res.statusText || "Request failed", res.status);
+  }
+  return res;
+}
+
 export async function apiPaginated<T>(path: string): Promise<Paginated<T>> {
   const res = await rawFetch(path, {}, true);
   const json = (await res.json().catch(() => ({}))) as Paginated<T> & { message?: string };

@@ -9,6 +9,16 @@ import {
   LightbulbDoodle, RulerPencilDoodle,
 } from "../components/dashboard/DashboardComponents";
 
+const QuestScrollDoodle = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="5" width="18" height="15" rx="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M3 9h18M8 5V3M16 5V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M7 13h6M7 17h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="18" cy="17" r="3" fill="#F5A623" />
+    <path d="M16.5 17l1 1 1.5-1.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // ── Sidebar nav item ──
 const SidebarItem = ({ icon, label, path, active = false }: { icon: React.ReactNode; label: string; path: string; active?: boolean }) => {
   const pathname = usePathname();
@@ -59,6 +69,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
     { label: "Timetable", path: "/teacher/timetable", icon: <GridDoodle size={20}/> },
     { label: "Messages", path: "/teacher/messages", icon: <MessageDoodle size={20}/> },
     { label: "Students", path: "/teacher/students", icon: <PeopleDoodle size={20}/> },
+    { label: "Quests", path: "/teacher/quests", icon: <QuestScrollDoodle size={20}/> },
   ];
 
   const navItems = isAdmin ? adminNavItems : teacherNavItems;
