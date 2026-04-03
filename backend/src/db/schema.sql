@@ -1,3 +1,4 @@
+-- Klasso canonical PostgreSQL DDL. TypeScript ORM mirror: backend/prisma/schema.prisma
 -- schools
 CREATE TABLE IF NOT EXISTS schools (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   last_login TIMESTAMPTZ,
+  settings JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -253,8 +255,10 @@ CREATE TABLE IF NOT EXISTS messages (
   recipient_id UUID REFERENCES users(id) ON DELETE CASCADE,
   subject VARCHAR(255),
   body TEXT NOT NULL,
-  read BOOLEAN DEFAULT FALSE,
+  is_read BOOLEAN DEFAULT FALSE,
   read_at TIMESTAMPTZ,
+  deleted_by_sender BOOLEAN DEFAULT FALSE,
+  deleted_by_recipient BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -267,7 +271,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   type VARCHAR(30) DEFAULT 'info', -- info, warning, alert, success
   entity_type VARCHAR(50), -- attendance, marks, assignment, fee
   entity_id UUID, -- polymorphic reference to the related record
-  read BOOLEAN DEFAULT FALSE,
+  is_read BOOLEAN DEFAULT FALSE,
+  read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -354,8 +359,8 @@ CREATE INDEX IF NOT EXISTS idx_marks_student ON marks(student_id);
 CREATE INDEX IF NOT EXISTS idx_marks_exam_subject ON marks(exam_subject_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_class_subject ON assignments(class_subject_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_student ON assignment_submissions(student_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
-CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_slots(class_id);
 CREATE INDEX IF NOT EXISTS idx_fee_payments_student ON fee_payments(student_id);
 CREATE INDEX IF NOT EXISTS idx_study_materials_class_subject ON study_materials(class_subject_id);
