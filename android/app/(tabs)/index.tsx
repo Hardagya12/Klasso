@@ -9,6 +9,9 @@ import {
   DoodleCheckCircle, DoodleStar, DoodlePencil, DoodleBook, DoodleLeaf, DoodleLightbulb,
   Colors, Fonts,
 } from '@/src/components';
+import { ClassXPWidget } from '@/src/components/ClassXPWidget';
+import { LevelUpModal } from '@/src/components/LevelUpModal';
+import StreakWidget from '@/src/components/StreakWidget';
 
 type StudentDash = {
   student: {
@@ -139,6 +142,9 @@ export default function HomeScreen() {
           </View>
         )}
 
+        <ClassXPWidget />
+        <StreakWidget />
+
         {/* ─── UPCOMING TIMETABLE ────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Up Next</Text>
@@ -209,6 +215,7 @@ export default function HomeScreen() {
         {/* Helper Padding for Bottom Tab Bar */}
         <View style={{ height: 80 }} />
       </ScrollView>
+      <LevelUpModal visible={false} newLevel={1} newTitle="Seedlings" onClose={() => {}} />
     </KlassoScreen>
   );
 }

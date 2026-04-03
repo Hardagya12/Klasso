@@ -10,6 +10,7 @@ const STUDENT_TABS_CONFIG = [
   { name: 'attendance', label: 'Attendance', Icon: DoodleCheckCircle },
   { name: 'grades',     label: 'Grades',     Icon: DoodleStar },
   { name: 'homework',   label: 'Homework',   Icon: DoodleBook },
+  { name: 'badges',     label: 'Badges',     Icon: DoodleStar },
   { name: 'ai',         label: 'AI Buddy',   Icon: DoodleLightbulb },
 ];
 
