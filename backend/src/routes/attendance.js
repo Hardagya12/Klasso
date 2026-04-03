@@ -4,27 +4,75 @@ const router = require('express').Router();
 const { authenticateJWT, authorizeRole } = require('../middleware/auth');
 const { validateBody, validateQuery } = require('../middleware/validate');
 const {
-  markAttendance, getSessionAttendance,
-  getStudentAttendance, getClassAttendanceSummary,
-  createQRSession, markViaQR,
+  startSession,
+  markAttendance,
+  generateQRToken,
+  scanQRToken,
+  voiceAttendance,
+  getAttendanceByClass,
+  getLowAttendanceStudents,
+  getAttendanceStats,
+  updateAttendanceRecord,
+  getLiveAttendance,
 } = require('../controllers/attendanceController');
 
+// ── Public route (no auth) ────────────────────────────────────────────────────
+// POST /api/attendance/qr/scan  — student scans QR code (no login needed)
+router.post('/qr/scan', validateBody(['token']), scanQRToken);
+
+// ── All routes below require authentication ───────────────────────────────────
 router.use(authenticateJWT);
 
-// Mark attendance for a whole session
-router.post('/session', authorizeRole('teacher','admin'), validateBody(['class_id','date','records']), markAttendance);
+// POST /api/attendance/session/start
+router.post(
+  '/session/start',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['class_id']),
+  startSession
+);
 
-// Get session records
-router.get('/session', authorizeRole('teacher','admin'), validateQuery(['class_id','date']), getSessionAttendance);
+// POST /api/attendance/mark
+router.post(
+  '/mark',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['records']),
+  markAttendance
+);
 
-// Summary for a student
-router.get('/student/:studentId', getStudentAttendance);
+// POST /api/attendance/qr/generate
+router.post(
+  '/qr/generate',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['class_id']),
+  generateQRToken
+);
 
-// Summary per student for a class
-router.get('/class/:classId/summary', authorizeRole('teacher','admin'), getClassAttendanceSummary);
+// POST /api/attendance/voice
+router.post(
+  '/voice',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['class_id', 'present_names']),
+  voiceAttendance
+);
 
-// QR flow (teacher creates, student scans)
-router.post('/qr-session', authorizeRole('teacher','admin'), validateBody(['class_id']), createQRSession);
-router.post('/qr-mark', authorizeRole('student'), validateBody(['token']), markViaQR);
+// GET /api/attendance  — ?class_id=&date=
+router.get('/', validateQuery(['class_id']), getAttendanceByClass);
+
+// GET /api/attendance/low  — ?threshold=75&class_id=
+router.get('/low', authorizeRole('teacher', 'admin'), getLowAttendanceStudents);
+
+// GET /api/attendance/stats/:class_id
+router.get('/stats/:class_id', getAttendanceStats);
+
+// GET /api/attendance/live/:class_id
+router.get('/live/:class_id', authorizeRole('teacher', 'admin'), getLiveAttendance);
+
+// PUT /api/attendance/records/:id
+router.put(
+  '/records/:id',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['status']),
+  updateAttendanceRecord
+);
 
 module.exports = router;
