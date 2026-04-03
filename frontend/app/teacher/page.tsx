@@ -17,6 +17,8 @@ import {
 import Sidebar from "../components/Sidebar";
 import NotificationPanel from "../components/NotificationPanel";
 import OnboardingModal from "../components/OnboardingModal";
+import StreakHighlights from "../components/StreakHighlights";
+import ClassXPModule from "../components/ClassXPModule";
 import { apiData } from "../../lib/api";
 import Link from "next/link";
 
@@ -232,6 +234,11 @@ export default function TeacherDashboard() {
               icon={LightbulbDoodle}
               progress={75}
             />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
+            {classes.length > 0 && <StreakHighlights classId={classes[0].id} />}
+            {classes.length > 0 && <ClassXPModule classId={classes[0].id} className={`${classes[0].name}-${classes[0].section}`} />}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 40 }}>
