@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Circle, Line, Rect, Ellipse, Polygon } from 'react-native-svg';
+import Svg, { Path, Circle, Line, Rect, Ellipse, Polygon, Text as SvgText } from 'react-native-svg';
 
 // ─── Shared type ────────────────────────────────────────────────────────────
 interface DoodleProps {
@@ -387,3 +387,57 @@ export const DoodleStarburst = ({ size = 28, color = '#FFE566' }: DoodleProps) =
     </Svg>
   );
 };
+
+// ─── 19. DoodleCloudHouse ──────────────────────────────────────────────────────────
+export const DoodleCloudHouse = ({ size = 28, color = '#3ECFB2' }: DoodleProps) => (
+  <Svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    <Path
+      d="M10 24V34H18V26H22V34H30V24L20 15L10 24Z"
+      fill={color}
+      fillOpacity={0.15}
+      stroke={color}
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M5 22L20 8L35 22"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Small cloud behind/above */}
+    <Path
+      d="M25 15C25 12 28 10 31 10C34 10 36 12 36 15C38 15 39 17 39 19C39 21 37 23 35 23H27C24 23 23 21 23 19C23 17 24 15 25 15Z"
+      fill={color}
+      fillOpacity={0.2}
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// ─── 20. DoodleSpeechBubble ──────────────────────────────────────────────────
+export const DoodleSpeechBubble = ({ size = 28, color = '#B5A8FF' }: DoodleProps) => (
+  <Svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    <Path
+      d="M5 20C5 11 11.5 5 20 5C28.5 5 35 11 35 20C35 29 28.5 35 20 35C17 35 14 34.2 11.5 32.8L5 35L6.2 28.5C5.4 26 5 23 5 20Z"
+      fill={color}
+      fillOpacity={0.2}
+      stroke={color}
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// ─── 21. DoodleZzz ───────────────────────────────────────────────────────────
+export const DoodleZzz = ({ size = 28, color = '#6B8C85' }: DoodleProps) => (
+  <Svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    <SvgText x="5" y="30" fill={color} fontSize="14" fontFamily="Caveat_400Regular">Z</SvgText>
+    <SvgText x="15" y="20" fill={color} fontSize="18" fontFamily="Caveat_400Regular">z</SvgText>
+    <SvgText x="28" y="10" fill={color} fontSize="24" fontFamily="Caveat_400Regular">z</SvgText>
+  </Svg>
+);
+
