@@ -44,7 +44,7 @@ export const Radius = {
 } as const;
 
 // Retro flat shadow — the signature mid-century look
-export const retroShadow = (offsetX = 4, offsetY = 4, color = Colors.shadow) => ({
+export const retroShadow = (offsetX = 4, offsetY = 4, color: string = Colors.shadow) => ({
   shadowColor: color,
   shadowOffset: { width: offsetX, height: offsetY },
   shadowOpacity: 1,

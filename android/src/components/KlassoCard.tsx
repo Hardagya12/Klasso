@@ -36,7 +36,7 @@ interface KlassoCardProps {
   variant?: Variant;
   doodle?: DoodleType;
   size?: Size;
-  style?: ViewStyle;
+  style?: import('react-native').StyleProp<ViewStyle>;
 }
 
 export const KlassoCard = ({

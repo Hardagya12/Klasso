@@ -1,24 +1,62 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+import {
+  useFonts,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+} from '@expo-google-fonts/dm-sans';
+import {
+  Caveat_400Regular,
+  Caveat_500Medium,
+  Caveat_600SemiBold,
+  Caveat_700Bold,
+} from '@expo-google-fonts/caveat';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [fontsLoaded] = useFonts({
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    Caveat_400Regular,
+    Caveat_500Medium,
+    Caveat_600SemiBold,
+    Caveat_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="parent/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="parent/child-overview" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="parent/notifications" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="parent/fees" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="parent/settings" options={{ animation: 'slide_from_right' }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar style="dark" />
+    </>
   );
 }

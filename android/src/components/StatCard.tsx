@@ -37,7 +37,7 @@ interface StatCardProps {
   label: string;
   statType?: StatType;
   sublabel?: string;
-  style?: ViewStyle;
+  style?: import('react-native').StyleProp<ViewStyle>;
 }
 
 export const StatCard = ({
@@ -83,8 +83,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    padding: 16,
-    minWidth: 100,
+    padding: 12,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -96,9 +95,9 @@ const styles = StyleSheet.create({
   },
   value: {
     fontFamily: Fonts.headingXB,
-    fontSize: 32,
+    fontSize: 26,
     color: Colors.textPrimary,
-    lineHeight: 38,
+    lineHeight: 32,
   },
   label: {
     fontFamily: Fonts.body,
