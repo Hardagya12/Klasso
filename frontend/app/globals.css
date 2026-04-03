@@ -1,35 +1,50 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Klasso Original Palette */
-  --color-primary:        #F5A623;
-  --color-secondary:      #4A90D9;
-  --color-accent:         #E8534A;
-  --color-success:        #5BAD6F;
-  --color-background:     #FDFBF5;
-  --color-surface:        #FFFFFF;
-  --color-text:           #2C2A24;
-  --color-text-muted:     #7A7670;
-  --color-border:         #E8E4D9;
-  --color-border-dark:    #2C2A24;
+  /* ── Core Palette ── */
+  --color-primary:         #F5A623;
+  --color-primary-light:   #FEF3DC;
+  --color-primary-dark:    #C47D0E;
 
-  /* Typography */
+  --color-secondary:       #4A90D9;
+  --color-secondary-light: #D6EAF8;
+  --color-secondary-dark:  #2471A3;
+
+  --color-accent:          #E8534A;
+  --color-accent-light:    #FDEDEC;
+  --color-accent-dark:     #B03A33;
+
+  --color-success:         #5BAD6F;
+  --color-success-light:   #D5F5E3;
+
+  --color-background:      #FDFBF5;
+  --color-surface:         #FFFFFF;
+
+  --color-text:            #2C2A24;
+  --color-text-muted:      #7A7670;
+
+  --color-border:          #E8E4D9;
+  --color-border-dark:     #2C2A24;
+
+  /* ── Typography ── */
   --font-heading:  "Nunito", sans-serif;
   --font-body:     "DM Sans", sans-serif;
   --font-accent:   "Caveat", cursive;
 
-  /* Classic Shadows */
-  --shadow-retro: 4px 4px 0px #2C2A24;
+  /* ── Shadows ── */
+  --shadow-retro:    4px 4px 0px #2C2A24;
+  --shadow-retro-sm: 2px 2px 0px #2C2A24;
 }
 
-:root {
-  background-color: var(--color-background);
-  color: var(--color-text);
-}
-
+/* Base styles */
 body {
-  font-family: var(--font-body);
+  background-color: #FDFBF5;
+  color: #2C2A24;
+  font-family: "DM Sans", sans-serif;
 }
 
-.font-accent { font-family: var(--font-accent); }
-.font-heading { font-family: var(--font-heading); }
+.font-heading { font-family: "Nunito", sans-serif; }
+.font-body    { font-family: "DM Sans", sans-serif; }
+.font-accent  { font-family: "Caveat", cursive; }
+.shadow-retro { box-shadow: 4px 4px 0px #2C2A24; }
+.shadow-retro-sm { box-shadow: 2px 2px 0px #2C2A24; }
