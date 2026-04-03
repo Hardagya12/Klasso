@@ -56,6 +56,7 @@ export default function TeacherDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [dash, setDash] = useState<TeacherDash | null>(null);
+  const [moodData, setMoodData] = useState<any>(null);
   const [unread, setUnread] = useState(0);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
@@ -63,13 +64,15 @@ export default function TeacherDashboard() {
     let cancelled = false;
     void (async () => {
       try {
-        const [d, c] = await Promise.all([
+        const [d, c, m] = await Promise.all([
           apiData<TeacherDash>("/api/analytics/teacher"),
           apiData<{ unread?: number }>("/api/notifications/count"),
+          apiData<any>("/api/mood/alerts")
         ]);
         if (!cancelled) {
           setDash(d);
           setUnread(typeof c?.unread === "number" ? c.unread : 0);
+          setMoodData(m);
         }
       } catch (e) {
         if (!cancelled) setLoadErr(e instanceof Error ? e.message : "Failed to load dashboard");
@@ -88,6 +91,31 @@ export default function TeacherDashboard() {
   const schedule = dash?.today_schedule ?? [];
   const atRisk = dash?.at_risk_students ?? [];
   const activity = dash?.recent_submissions ?? [];
+  const moodAlerts = moodData?.alerts || [];
+  const moodAgg = moodData?.classAggregate || { GREAT: 0, GOOD: 0, OKAY: 0, SAD: 0, STRESSED: 0, total: 0 };
+  const getAggColor = () => {
+    if (moodAgg.total === 0) return "#7A7670";
+    const goodR = (moodAgg.GREAT + moodAgg.GOOD) / moodAgg.total;
+    const badR = (moodAgg.SAD + moodAgg.STRESSED) / moodAgg.total;
+    if (badR > 0.25) return "#E8534A";
+    if (goodR > 0.6) return "#5BAD6F";
+    return "#F5A623";
+  };
+  const getAggText = () => {
+    if (moodAgg.total === 0) return "No data today";
+    const goodR = (moodAgg.GREAT + moodAgg.GOOD) / moodAgg.total;
+    const badR = (moodAgg.SAD + moodAgg.STRESSED) / moodAgg.total;
+    if (badR > 0.25) return "Needs Attention";
+    if (goodR > 0.6) return "Generally Good";
+    return "Mixed";
+  };
+
+  const markAlertRead = async (id: string) => {
+    try {
+      await apiData(`/api/mood/alerts/${id}/read`, { method: "PATCH" });
+      setMoodData({ ...moodData, alerts: moodAlerts.filter((a:any) => a.id !== id) });
+    } catch(e) {}
+  };
 
   const headerDate = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -432,72 +460,129 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          <div style={{ marginTop: 60 }}>
-            <div style={{ marginBottom: 20 }}>
-              <h3
+          <div style={{ marginTop: 60, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40 }}>
+            {/* Student Wellbeing */}
+            <div style={{ position: "relative" }}>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <HeartSVG size={22} color="#E8534A" />
+                  <h3 style={{ fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: 18, color: "#2C2A24", margin: 0 }}>
+                    Wellbeing Signals
+                  </h3>
+                </div>
+                <WavyLine width={180} />
+              </div>
+
+              <div style={{ backgroundColor: "#E8FAF7", borderRadius: 8, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3ECFB2" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <p style={{ fontSize: 13, color: "#1C5C4F", margin: 0, fontWeight: 600 }}>
+                  Individual mood data is private to each student. You see only patterns and aggregate signals.
+                </p>
+              </div>
+
+              <div style={{ backgroundColor: "#FFFFFF", border: "2px solid #E8E4D9", borderRadius: 16, padding: "20px", boxShadow: "3px 3px 0px #E8E4D9", marginBottom: 20 }}>
+                <h4 style={{ fontFamily: '"Nunito", sans-serif', fontWeight: 700, fontSize: 15, margin: "0 0 8px" }}>Class Mood Overview</h4>
+                <p style={{ fontSize: 13, color: "#7A7670", margin: "0 0 16px" }}>Today: {moodAgg.total} students checked in</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ height: 12, flex: 1, backgroundColor: "#E8E4D9", borderRadius: 999, overflow: "hidden", display: "flex" }}>
+                    <div style={{ width: `${moodAgg.total ? (moodAgg.GREAT + moodAgg.GOOD)/moodAgg.total * 100 : 0}%`, backgroundColor: "#5BAD6F" }} />
+                    <div style={{ width: `${moodAgg.total ? (moodAgg.OKAY)/moodAgg.total * 100 : 0}%`, backgroundColor: "#F5A623" }} />
+                    <div style={{ width: `${moodAgg.total ? (moodAgg.SAD + moodAgg.STRESSED)/moodAgg.total * 100 : 0}%`, backgroundColor: "#E8534A" }} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: getAggColor() }}>{getAggText()}</span>
+                </div>
+              </div>
+
+              {moodAlerts.length === 0 ? (
+                 <p style={{ color: "#7A7670", fontSize: 14 }}>No wellbeing alerts at this time.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {moodAlerts.map((alert: any) => (
+                    <div key={alert.id} style={{ backgroundColor: "#FFF", borderRadius: 14, padding: "16px", borderLeft: "4px solid #FF6B6B", borderTop: "2px solid #E8E4D9", borderRight: "2px solid #E8E4D9", borderBottom: "2px solid #E8E4D9", boxShadow: "3px 3px 0px #E8E4D9" }}>
+                      <p style={{ fontFamily: '"Nunito", sans-serif', fontSize: 14, color: "#2C2A24", margin: "0 0 12px", lineHeight: 1.5 }}>
+                        <strong>{alert.studentNameFallback}:</strong> {alert.message}
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                         <span style={{ fontSize: 11, color: "#FF6B6B", fontWeight: 700, textTransform: "uppercase" }}>Check in with your class today</span>
+                         <button onClick={() => markAlertRead(alert.id)} style={{ background: "transparent", border: "none", color: "#7A7670", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Mark as seen</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Submissions */}
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <h3
+                  style={{
+                    fontFamily: '"Nunito", sans-serif',
+                    fontWeight: 800,
+                    fontSize: 18,
+                    margin: "0 0 4px",
+                    color: "#2C2A24",
+                  }}
+                >
+                  Recent submissions
+                </h3>
+                <SquigglySVG width={180} color="#F5A623" />
+              </div>
+              <div
                 style={{
-                  fontFamily: '"Nunito", sans-serif',
-                  fontWeight: 800,
-                  fontSize: 18,
-                  margin: "0 0 4px",
-                  color: "#2C2A24",
+                  maxWidth: 640,
+                  borderLeft: "3px dotted #2C2A24",
+                  marginLeft: 12,
+                  paddingLeft: 32,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 28,
                 }}
               >
-                Recent submissions
-              </h3>
-              <SquigglySVG width={180} color="#F5A623" />
-            </div>
-            <div
-              style={{
-                maxWidth: 640,
-                borderLeft: "3px dotted #2C2A24",
-                marginLeft: 12,
-                paddingLeft: 32,
-                display: "flex",
-                flexDirection: "column",
-                gap: 28,
-              }}
-            >
-              {activity.length === 0 && (
-                <p style={{ color: "#7A7670", fontSize: 14 }}>No recent submissions.</p>
-              )}
-              {activity.map((row, i) => (
-                <div key={i} style={{ position: "relative" }}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: -44,
-                      top: 4,
-                      width: 22,
-                      height: 22,
-                      borderRadius: "50%",
-                      backgroundColor: "#FFFFFF",
-                      border: "2px solid #2C2A24",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="#F5A623">
-                      <circle cx="5" cy="5" r="4" />
-                    </svg>
+                {activity.length === 0 && (
+                  <p style={{ color: "#7A7670", fontSize: 14 }}>No recent submissions.</p>
+                )}
+                {activity.map((row, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: -44,
+                        top: 4,
+                        width: 22,
+                        height: 22,
+                        borderRadius: "50%",
+                        backgroundColor: "#FFFFFF",
+                        border: "2px solid #2C2A24",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="#F5A623">
+                        <circle cx="5" cy="5" r="4" />
+                      </svg>
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: '"Nunito", sans-serif',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        margin: "0 0 2px",
+                        color: "#2C2A24",
+                      }}
+                    >
+                      <strong>{row.student_name}</strong> · {row.assignment_title}
+                    </p>
+                    <p style={{ fontFamily: '"Caveat", cursive', fontSize: 15, color: "#7A7670", margin: 0 }}>
+                      {row.submitted_at ? new Date(row.submitted_at).toLocaleString() : ""}
+                    </p>
                   </div>
-                  <p
-                    style={{
-                      fontFamily: '"Nunito", sans-serif',
-                      fontWeight: 700,
-                      fontSize: 14,
-                      margin: "0 0 2px",
-                      color: "#2C2A24",
-                    }}
-                  >
-                    <strong>{row.student_name}</strong> · {row.assignment_title}
-                  </p>
-                  <p style={{ fontFamily: '"Caveat", cursive', fontSize: 15, color: "#7A7670", margin: 0 }}>
-                    {row.submitted_at ? new Date(row.submitted_at).toLocaleString() : ""}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -565,6 +650,11 @@ const WavyLine = ({ width }: { width: number }) => (
       strokeWidth="2"
       strokeLinecap="round"
     />
+  </svg>
+);
+const HeartSVG = ({ size, color }: { size: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || "#E8534A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 const ArrowRightSVG = ({ size }: { size: number }) => (
