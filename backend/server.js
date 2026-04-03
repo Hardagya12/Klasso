@@ -33,6 +33,7 @@ const studyMaterialRoutes = require('./src/routes/studyMaterials');
 const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
 const aiRoutes = require('./src/routes/ai');
+const questRoutes = require('./src/routes/quests');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -87,6 +88,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/streak', streakRoutes);
 app.use('/api/xp', xpRoutes);
+app.use('/api/quests', questRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {

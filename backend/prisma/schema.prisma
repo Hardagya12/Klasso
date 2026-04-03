@@ -73,6 +73,7 @@ model User {
   lessonPlansCreated         LessonPlan[]         @relation("LessonPlanCreatedBy")
   eventsCreated              Event[]              @relation("EventCreatedBy")
   documentsGenerated         Document[]           @relation("DocumentGeneratedBy")
+  questsCreated              Quest[]              @relation("QuestTeacher")
 
   @@index([schoolId], map: "idx_users_school")
   @@index([role], map: "idx_users_role")
@@ -118,6 +119,7 @@ model Class {
   timetableSlots      TimetableSlot[]
   announcements       Announcement[]
   classXP             ClassXP?
+  quests              Quest[]
 
   @@unique([schoolId, academicYearId, name, section])
   @@map("classes")
@@ -148,6 +150,8 @@ model Student {
   documents          Document[]
   streak             AttendanceStreak?
   studentBadges      StudentBadge[]
+  quests             Quest[]            @relation("QuestStudent")
+  questCompletions   QuestCompletion[]
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -673,4 +677,57 @@ enum XPEventType {
   LEVEL_UP_BONUS
   TEACHER_BONUS
   STREAK_MILESTONE
+}
+
+// ── Study Quests ────────────────────────────────────────────────────────────
+
+enum QuestType {
+  ATTENDANCE_STREAK
+  AI_BUDDY_SESSIONS
+  ASSIGNMENT_SUBMISSIONS
+  GRADE_TARGET
+  ZERO_ABSENCES_WEEK
+  CUSTOM
+}
+
+model Quest {
+  id          String    @id @default(cuid())
+  teacherId   String    @map("teacher_id") @db.Uuid
+  classId     String    @map("class_id") @db.Uuid
+  studentId   String?   @map("student_id") @db.Uuid
+  title       String    @db.VarChar(255)
+  description String
+  type        QuestType
+  target      Json
+  xpReward    Int       @default(50) @map("xp_reward")
+  badgeName   String?   @map("badge_name") @db.VarChar(100)
+  badgeColor  String?   @map("badge_color") @db.VarChar(20)
+  startDate   DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate     DateTime  @map("end_date") @db.Timestamptz(6)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  teacher     User      @relation("QuestTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  class       Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student     Student?  @relation("QuestStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  completions QuestCompletion[]
+
+  @@index([classId], map: "idx_quests_class")
+  @@index([teacherId], map: "idx_quests_teacher")
+  @@map("quests")
+}
+
+model QuestCompletion {
+  id          String   @id @default(cuid())
+  questId     String   @map("quest_id")
+  studentId   String   @map("student_id") @db.Uuid
+  completedAt DateTime @default(now()) @map("completed_at") @db.Timestamptz(6)
+  xpAwarded   Int      @map("xp_awarded")
+
+  quest   Quest   @relation(fields: [questId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([questId, studentId])
+  @@index([studentId], map: "idx_quest_completions_student")
+  @@map("quest_completions")
 }
