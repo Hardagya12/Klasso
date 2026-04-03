@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { apiData } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -12,6 +12,7 @@ import {
 import { ClassXPWidget } from '@/src/components/ClassXPWidget';
 import { LevelUpModal } from '@/src/components/LevelUpModal';
 import StreakWidget from '@/src/components/StreakWidget';
+import { DuelWidget } from '@/src/components/DuelWidget';
 
 type StudentDash = {
   student: {
@@ -49,6 +50,26 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [dash, setDash] = useState<StudentDash | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [moodCheckedIn, setMoodCheckedIn] = useState(true);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      async function checkMood() {
+        try {
+          const res = await apiData<any>('/api/mood/my-summary');
+          if (res.checkIns?.length > 0) {
+            const last = res.checkIns[res.checkIns.length - 1];
+            const lastDate = new Date(last.date);
+            const today = new Date();
+            setMoodCheckedIn(lastDate.toDateString() === today.toDateString());
+          } else {
+            setMoodCheckedIn(false);
+          }
+        } catch (e) {}
+      }
+      checkMood();
+    }, [])
+  );
 
   useEffect(() => {
     if (user?.role !== 'student') return;
@@ -142,8 +163,26 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {!moodCheckedIn && dash && (
+          <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/mood')}>
+            <KlassoCard style={{ marginBottom: 20, backgroundColor: '#E8FAF7', borderColor: '#3ECFB2' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <DoodleLeaf size={32} color="#3ECFB2" />
+                <View style={{ marginLeft: 16, flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.heading, fontSize: 16, color: '#1C5C4F' }}>Daily Check-in</Text>
+                  <Text style={{ fontFamily: Fonts.body, fontSize: 13, color: '#1C5C4F', opacity: 0.8, marginTop: 2 }}>How are you feeling today?</Text>
+                </View>
+                <View style={{ backgroundColor: '#2C2A24', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100 }}>
+                  <Text style={{ fontFamily: Fonts.heading, color: '#FFF', fontSize: 13 }}>Let's Go</Text>
+                </View>
+              </View>
+            </KlassoCard>
+          </TouchableOpacity>
+        )}
+
         <ClassXPWidget />
         <StreakWidget />
+        <DuelWidget />
 
         {/* ─── UPCOMING TIMETABLE ────────────────────────── */}
         <View style={styles.sectionHeader}>
