@@ -8,6 +8,7 @@ import {
   DoodleBook, DoodleLightbulb, DoodleRuler, DoodleFlower, DoodleLeaf, DoodleCheckCircle, DoodlePencil,
   Colors, Fonts,
 } from '@/src/components';
+import { apiData } from '@/lib/api';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -106,7 +107,7 @@ function AssignmentCard({ item, onToggle }: { item: any, onToggle: () => void })
           </View>
           
           <View style={styles.bottomRow}>
-            <Text style={styles.teacherName}>Mr. Harris</Text>
+            <Text style={styles.teacherName}>{item.teacher_name || 'Teacher'}</Text>
             <View style={styles.dot} />
             <DoodlePaper size={14} />
             <View style={styles.dot} />
@@ -132,17 +133,51 @@ export default function HomeworkScreen() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('Pending');
 
-  const [tasks, setTasks] = useState([
-    { id: 1, subject: 'Science', title: 'Cell Structure Diagram', desc: 'Label all parts of the plant cell', due: 'Tomorrow', pages: 'Pg 45-52', priority: 'high', color: Colors.purple, status: 'pending' },
-    { id: 2, subject: 'Math', title: 'Algebra Practice Set 4', desc: 'Complete odd numbers only', due: 'Wednesday', pages: 'Pg 112', priority: 'medium', color: Colors.mint, status: 'pending' },
-    { id: 3, subject: 'English', title: 'Read Hamlet Act 1', desc: 'Prepare for class discussion', due: 'Yesterday', pages: 'Act 1', priority: 'high', color: Colors.coral, status: 'overdue' },
-    { id: 4, subject: 'History', title: 'WW2 Essay Outline', desc: 'Bullet points are fine', due: 'Last Week', pages: '', priority: 'high', color: Colors.yellowDark, status: 'done' },
-  ]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    // Fetch all assignments for this student
+    apiData<{ data: any[] }>('/api/assignments')
+      .then((res: any) => {
+        // Assume API returns res.data instead of array directly ? Wait, apiData already unpacks `data` if it is an Envelope. 
+        // Our apiData returns T which is the actual data array if it's paginated it might return { pageSize, data } or similar.
+        // Let's check what `sendPaginated` returns. It returns { success: true, data: data, pagination }
+        // So `apiData('/api/assignments')` will return the actual list if it's standard Envelope, or an object with data if paginated.
+        // Actually, sendPaginated puts rows in `data`. apiData extracts `json.data`.
+        // So `res` is just the array. Wait, sendPaginated: `res.json({ success: true, data, pagination })`
+        // So apiData returns `data` which is the array.
+        const items = Array.isArray(res) ? res : res.data ?? [];
+        
+        const mapped = items.map((item: any) => {
+          const due = new Date(item.due_date);
+          const isOverdue = due < new Date() && item.submission_count === 0;
+          return {
+            id: item.id,
+            subject: item.subject_name || 'Subject',
+            title: item.title,
+            desc: item.description,
+            due: due.toLocaleDateString(),
+            priority: 'medium',
+            color: Colors.mint,
+            status: item.submission_count > 0 ? 'done' : (isOverdue ? 'overdue' : 'pending'),
+            teacher_name: item.teacher_name || 'Teacher'
+          };
+        });
+        setTasks(mapped);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   const toggleTask = (id: number) => {
+    // Mock toggle for UI (in a real app, this would call a mark-done endpoint)
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
-        return { ...t, status: t.status === 'done' ? (t.due.includes('Yesterday') ? 'overdue' : 'pending') : 'done' };
+        return { ...t, status: t.status === 'done' ? 'pending' : 'done' };
       }
       return t;
     }));

@@ -1,15 +1,81 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { apiData } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   KlassoScreen, StatCard, KlassoCard, KlassoBadge, KlassoButton, KlassoAvatar,
   DoodleCheckCircle, DoodleStar, DoodlePencil, DoodleBook, DoodleLeaf, DoodleLightbulb,
   Colors, Fonts,
 } from '@/src/components';
 
+type StudentDash = {
+  student: {
+    name: string;
+    class_id: string;
+    class_name: string | null;
+    section: string | null;
+    roll_no: string;
+  };
+  attendance: { percentage: number; this_month: { present?: number; absent?: number } };
+  marks: { latest_exam: { name: string; pct: number } | null };
+  today_timetable: Array<{
+    period_number: number;
+    start_time: string;
+    end_time: string;
+    subject: string;
+    teacher: string | null;
+  }>;
+  pending_assignments: Array<{
+    title: string;
+    subject: string;
+    due_date: string;
+    is_overdue: boolean;
+  }>;
+};
+
+function fmtTime(s: string) {
+  if (!s) return '';
+  const d = new Date(s.includes('T') ? s : `1970-01-01T${s}`);
+  return Number.isNaN(d.getTime()) ? s : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [dash, setDash] = useState<StudentDash | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.role !== 'student') return;
+    void (async () => {
+      try {
+        const d = await apiData<StudentDash>('/api/analytics/student');
+        setDash(d);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : 'Could not load dashboard');
+      }
+    })();
+  }, [user?.role]);
+
+  if (user && user.role !== 'student') {
+    return (
+      <KlassoScreen>
+        <View style={{ padding: 24 }}>
+          <Text style={{ fontFamily: Fonts.heading, fontSize: 18, color: Colors.textPrimary }}>
+            Student home is for student accounts. You are signed in as {user.role}.
+          </Text>
+        </View>
+      </KlassoScreen>
+    );
+  }
+
+  const displayName = dash?.student?.name || user?.name || 'Student';
+  const cls =
+    dash?.student?.class_name && dash?.student?.section
+      ? `${dash.student.class_name}-${dash.student.section}`
+      : 'Class';
 
   return (
     <KlassoScreen noSafeArea>
@@ -22,77 +88,112 @@ export default function HomeScreen() {
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Good morning,</Text>
-            <Text style={styles.name}>Aarav Patel ✨</Text>
+            <Text style={styles.name}>{displayName} ✨</Text>
+            <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>
+              {cls} · Roll {dash?.student?.roll_no ?? '—'}
+            </Text>
           </View>
-          <KlassoAvatar name="Aarav Patel" size={48} online />
+          <KlassoAvatar name={displayName} size={48} online />
         </View>
 
-        <Text style={styles.quote}>"Ready to learn something new today?"</Text>
+        <Text style={styles.quote}>
+          {err ? `⚠ ${err}` : dash ? 'Your live timetable and tasks from school.' : 'Loading your dashboard…'}
+        </Text>
       </View>
 
       {/* ─── STAT CARDS (outside ScrollView to avoid clipping) ── */}
       <View style={styles.statContainer}>
-        <StatCard label="Attendance" value="94%" statType="attendance" style={{ flex: 1 }} />
-        <StatCard label="Avg Grade" value="A-" statType="grade" style={{ flex: 1 }} />
-        <StatCard label="Day Streak" value="🔥 7" statType="streak" sublabel="Keep it up!" style={{ flex: 1 }} />
+        <StatCard
+          label="Attendance"
+          value={dash ? `${Math.round(dash.attendance.percentage)}%` : '…'}
+          statType="attendance"
+          style={{ flex: 1 }}
+        />
+        <StatCard
+          label="Latest exam"
+          value={
+            dash?.marks?.latest_exam
+              ? `${Math.round(Number(dash.marks.latest_exam.pct))}%`
+              : '—'
+          }
+          statType="grade"
+          style={{ flex: 1 }}
+        />
+        <StatCard
+          label="This month"
+          value={
+            dash
+              ? `${dash.attendance.this_month?.present ?? 0}P/${dash.attendance.this_month?.absent ?? 0}A`
+              : '…'
+          }
+          statType="streak"
+          sublabel="Present / Absent"
+          style={{ flex: 1 }}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {!dash && !err && (
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <ActivityIndicator color={Colors.mintDark} />
+          </View>
+        )}
 
         {/* ─── UPCOMING TIMETABLE ────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Up Next</Text>
-          <TouchableOpacity><Text style={styles.seeAll}>See auto timetable</Text></TouchableOpacity>
+          <TouchableOpacity><Text style={styles.seeAll}>Today</Text></TouchableOpacity>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll} contentContainerStyle={styles.horizontalScrollContent}>
-          <KlassoCard variant="mint" size="md" style={styles.hCard}>
-            <Text style={styles.subject}>Mathematics</Text>
-            <Text style={styles.timeInfo}>09:00 AM — Room 102</Text>
-            <View style={styles.hCardFooter}>
-              <KlassoBadge label="Next" color="mint" />
-              <DoodlePencil size={24} color={Colors.mint} />
-            </View>
-          </KlassoCard>
-          
-          <KlassoCard variant="purple" size="md" style={styles.hCard}>
-            <Text style={styles.subject}>Science</Text>
-            <Text style={styles.timeInfo}>10:15 AM — Lab B</Text>
-            <View style={styles.hCardFooter}>
-              <KlassoBadge label="Later" color="gray" />
-              <DoodleLightbulb size={24} color={Colors.purple} />
-            </View>
-          </KlassoCard>
+          {(dash?.today_timetable ?? []).length === 0 && dash && (
+            <Text style={{ fontFamily: Fonts.body, color: Colors.textMuted }}>No periods today.</Text>
+          )}
+          {(dash?.today_timetable ?? []).map((slot, idx) => (
+            <KlassoCard key={idx} variant={idx === 0 ? 'mint' : 'purple'} size="md" style={styles.hCard}>
+              <Text style={styles.subject}>{slot.subject}</Text>
+              <Text style={styles.timeInfo}>
+                {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+                {slot.teacher ? ` · ${slot.teacher}` : ''}
+              </Text>
+              <View style={styles.hCardFooter}>
+                <KlassoBadge label={idx === 0 ? 'Next' : 'Later'} color={idx === 0 ? 'mint' : 'gray'} />
+                {idx === 0 ? (
+                  <DoodlePencil size={24} color={Colors.mint} />
+                ) : (
+                  <DoodleLightbulb size={24} color={Colors.purple} />
+                )}
+              </View>
+            </KlassoCard>
+          ))}
         </ScrollView>
 
         {/* ─── DUE SOON ──────────────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Due Soon</Text>
-          <TouchableOpacity><Text style={styles.seeAll}>View all 3</Text></TouchableOpacity>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>{dash ? `${dash.pending_assignments.length} open` : ''}</Text>
+          </TouchableOpacity>
         </View>
 
         <KlassoCard variant="default" style={styles.mb}>
-          <View style={styles.taskItem}>
-            <View style={[styles.taskDot, { backgroundColor: Colors.yellow }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle}>History Essay</Text>
-              <Text style={styles.taskSubtitle}>Due Tomorrow · History</Text>
+          {(dash?.pending_assignments ?? []).length === 0 && dash && (
+            <Text style={{ fontFamily: Fonts.body, color: Colors.textMuted, padding: 12 }}>No pending homework.</Text>
+          )}
+          {(dash?.pending_assignments ?? []).map((task, idx) => (
+            <View
+              key={`${task.title}-${idx}`}
+              style={[styles.taskItem, idx === (dash?.pending_assignments?.length ?? 0) - 1 ? { borderBottomWidth: 0 } : {}]}
+            >
+              <View style={[styles.taskDot, { backgroundColor: task.is_overdue ? Colors.coral : Colors.yellow }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taskTitle}>{task.title}</Text>
+                <Text style={styles.taskSubtitle}>
+                  {task.subject} · {new Date(task.due_date).toLocaleString()}
+                </Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.checkBorder}>
-              <Text style={{ color: Colors.border }}>✓</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.taskItem}>
-            <View style={[styles.taskDot, { backgroundColor: Colors.coral }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle}>Algebra Practice</Text>
-              <Text style={styles.taskSubtitle}>Due Wed · Mathematics</Text>
-            </View>
-            <TouchableOpacity style={styles.checkBorder}>
-              <Text style={{ color: Colors.border }}>✓</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </KlassoCard>
         
         {/* Parent View shortcut */}

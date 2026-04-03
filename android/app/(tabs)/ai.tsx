@@ -8,6 +8,9 @@ import {
   DoodleBook, DoodleLightbulb, DoodleRuler, DoodleFlower, DoodleLeaf, DoodleCloud, DoodlePencil,
   Colors, Fonts,
 } from '@/src/components';
+import { apiData } from '@/lib/api';
+
+type ChatMsg = { id: number; text: string; sender: 'user' | 'ai' };
 
 // Helper for typing indicator
 function TypingIndicator() {
@@ -45,7 +48,7 @@ const DoodlePaperPlane = ({ size = 24, color = "white" }) => (
 
 export default function AIScreen() {
   const insets = useSafeAreaInsets();
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -63,21 +66,28 @@ export default function AIScreen() {
     { name: "English", color: Colors.coral, icon: DoodleBook },
   ];
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
     if (!text.trim()) return;
-    const newMsg = { id: Date.now(), text, sender: 'user' };
-    setMessages(prev => [...prev, newMsg]);
+    const newMsg: ChatMsg = { id: Date.now(), text: text.trim(), sender: 'user' };
+    const thread = [...messages, newMsg];
+    setMessages(thread);
     setInputText('');
     setIsTyping(true);
-    
-    setTimeout(() => {
+    try {
+      const payload = thread
+        .filter((m) => m.sender === 'user' || m.sender === 'ai')
+        .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+      const { reply } = await apiData<{ reply: string }>('/api/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({ messages: payload }),
+      });
+      setMessages((prev) => [...prev, { id: Date.now() + 1, text: reply, sender: 'ai' }]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not reach tutor';
+      setMessages((prev) => [...prev, { id: Date.now() + 2, text: msg, sender: 'ai' }]);
+    } finally {
       setIsTyping(false);
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: "I'm your AI Buddy! I don't have brain connection yet, but I'll totally help you ace this when hooked up! ✨", 
-        sender: 'ai' 
-      }]);
-    }, 1500);
+    }
   };
 
   return (
