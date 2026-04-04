@@ -75,9 +75,27 @@ export default function AssignmentsPage() {
     (a.title.toLowerCase().includes(searchTerm.toLowerCase()) || a.subject.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handlePublish = (newAssignment: any) => {
-    fetchAssignments(); // Refresh from server
-    setIsModalOpen(false);
+  const handlePublish = async (newAssignment: any) => {
+    try {
+      // Find an existing class_subject_id to attach to. (In full production, this would be selected via dropdown)
+      const validClassSubjectId = assignments.length > 0 ? assignments[0].class_subject_id : "00000000-0000-0000-0000-000000000000";
+      
+      await apiFetch("/api/assignments", {
+        method: "POST",
+        body: JSON.stringify({
+          class_subject_id: validClassSubjectId,
+          title: newAssignment.title,
+          description: newAssignment.description,
+          due_date: new Date(newAssignment.dueDate).toISOString(),
+          max_marks: newAssignment.totalMarks
+        })
+      });
+      
+      fetchAssignments(); // Refresh from server to show it
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert("Failed to create assignment: " + err.message);
+    }
   };
 
   const handleViewSubmissions = (id: string) => {
