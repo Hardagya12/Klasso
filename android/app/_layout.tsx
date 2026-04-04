@@ -57,6 +57,7 @@ export default function RootLayout() {
         <Stack.Screen name="parent/notifications" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="parent/fees" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="parent/settings" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="parent/ptm" options={{ animation: 'slide_from_right' }} />
         {/* Feature screens — deep-linkable */}
         <Stack.Screen name="sub-briefing" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="class-xp" options={{ animation: 'slide_from_right' }} />
