@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
+import { apiData, apiFetch, apiPaginated } from "../../../lib/api";
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES
@@ -170,16 +171,7 @@ const CornerDiamonds = () => (
 
 type Status = "Approved" | "Draft" | "Pending";
 
-const STUDENTS = [
-  { id: 1, name: "Aarav Patel",     status: "Approved", avatarId: 1 },
-  { id: 2, name: "Ananya Sharma",   status: "Approved", avatarId: 2 },
-  { id: 3, name: "Arjun Mehta",     status: "Draft",    avatarId: 3 },
-  { id: 4, name: "Divya Singh",     status: "Pending",  avatarId: 4 },
-  { id: 5, name: "Ishaan Kumar",    status: "Approved", avatarId: 5 },
-  { id: 6, name: "Kavya Reddy",     status: "Pending",  avatarId: 0 },
-  { id: 7, name: "Manav Joshi",     status: "Draft",    avatarId: 1 },
-  { id: 8, name: "Nisha Verma",     status: "Pending",  avatarId: 2 },
-];
+// Remove static STUDENTS
 
 const avatarColor = (id: number) =>
   ["#FFD6E0", "#D6EAF8", "#D5F5E3", "#FEF9E7", "#F9EBEA", "#E8DAEF"][id % 6];
@@ -194,7 +186,14 @@ const MOCK_REPORT_TEXT = (name: string) =>
 // ═══════════════════════════════════════════════
 
 export default function ReportGeneratorPage() {
-  const [selectedStudent, setSelectedStudent] = useState(STUDENTS[2]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [reports, setReports] = useState<any[]>([]);
+  const [currentReport, setCurrentReport] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [approving, setApproving] = useState(false);
+
   const [tone, setTone] = useState("Encouraging");
   const [lengthPref, setLengthPref] = useState("Standard");
   const [lang, setLang] = useState("English");
@@ -204,9 +203,103 @@ export default function ReportGeneratorPage() {
     behaviour: true,
     recommendations: true,
   });
-  
-  const totalReports = 40;
-  const approvedCount = 12;
+
+  // Auto-resize the textarea when the AI streams or injects text
+  useEffect(() => {
+    if (currentReport?.content) {
+      const el = document.getElementById("report-textarea");
+      if (el) {
+         el.style.height = 'auto';
+         el.style.height = el.scrollHeight + 'px';
+      }
+    }
+  }, [currentReport?.content]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchStudentReports(selectedStudent.id);
+    } else {
+      setReports([]);
+      setCurrentReport(null);
+    }
+  }, [selectedStudent]);
+
+  const fetchStudents = async () => {
+    try {
+      const res = await apiPaginated<any>("/api/students?limit=50");
+      setStudents(res.data);
+      if (res.data.length > 0 && !selectedStudent) {
+        setSelectedStudent(res.data[0]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch students", err);
+    }
+  };
+
+  const fetchStudentReports = async (studentId: string) => {
+    setLoading(true);
+    try {
+      const res = await apiData<any[]>(`/api/reports/student/${studentId}`);
+      setReports(res);
+      // Automatically set the latest report if it exists
+      if (res.length > 0) {
+        setCurrentReport(res[0]);
+      } else {
+        setCurrentReport(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch reports", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedStudent) return;
+    setGenerating(true);
+    try {
+      const res = await apiData<any>(`/api/reports/generate/${selectedStudent.id}`, {
+        method: "POST",
+        body: JSON.stringify({ tone, lengthPref, includes })
+      });
+      // Add new report to list and set as current
+      const newReport = res.report;
+      setReports([newReport, ...reports]);
+      setCurrentReport(newReport);
+      // Update student status in list (for UI UI feedback)
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, reportStatus: 'Draft' } : s));
+    } catch (err: any) {
+      alert(err.message || "Failed to generate report");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!currentReport) return;
+    setApproving(true);
+    try {
+      await apiFetch(`/api/reports/${currentReport.id}/approve`, {
+        method: "PUT",
+        body: JSON.stringify({ content: currentReport.content })
+      });
+      setCurrentReport({ ...currentReport, approved: true });
+      setReports(prev => prev.map(r => r.id === currentReport.id ? { ...r, approved: true } : r));
+      // Update student status
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, reportStatus: 'Approved' } : s));
+    } catch (err: any) {
+      alert(err.message || "Failed to approve report");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const totalReports = students.length;
+  const approvedCount = students.filter(s => s.reportStatus === 'Approved' || (selectedStudent?.id === s.id && currentReport?.approved)).length;
 
   return (
     <div className="flex min-h-screen bg-[#FDFBF5]" style={{ fontFamily: '"DM Sans", sans-serif' }}>
@@ -300,11 +393,14 @@ export default function ReportGeneratorPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-              {STUDENTS.map(student => {
-                const isActive = selectedStudent.id === student.id;
+              {students.map(student => {
+                const isActive = selectedStudent?.id === student.id;
+                // Determine status based on fetched data or locally updated state
+                const status = student.reportStatus || (student.id === selectedStudent?.id && currentReport?.approved ? 'Approved' : 'Pending');
+                
                 const badgeColor = 
-                  student.status === "Approved" ? "bg-[#D5F5E3] text-[#5BAD6F] border-[#5BAD6F]" :
-                  student.status === "Draft" ? "bg-[#FEF3DC] text-[#F5A623] border-[#F5A623]" :
+                  status === "Approved" ? "bg-[#D5F5E3] text-[#5BAD6F] border-[#5BAD6F]" :
+                  status === "Draft" || status === "generated" ? "bg-[#FEF3DC] text-[#F5A623] border-[#F5A623]" :
                   "bg-[#F3F2EE] text-[#7A7670] border-[#C0BFBA]";
                   
                 return (
@@ -312,23 +408,23 @@ export default function ReportGeneratorPage() {
                     onClick={() => setSelectedStudent(student)}
                     className={`flex items-center justify-between p-3 rounded-[12px] cursor-pointer transition-all border-2
                       ${isActive ? "bg-[#EEF5FF] border-[#4A90D9] shadow-[2px_2px_0px_#4A90D9]" : "border-transparent hover:bg-[#FDFBF5]"}`}>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full">
                       <div className="relative">
                         <div className="w-10 h-10 rounded-full flex items-center justify-center font-heading font-extrabold text-sm border-2 border-[#2C2A24] shrink-0"
-                          style={{ backgroundColor: avatarColor(student.avatarId), fontFamily: '"Nunito", sans-serif' }}>
-                          {initials(student.name)}
+                          style={{ backgroundColor: avatarColor(student.id.length), fontFamily: '"Nunito", sans-serif' }}>
+                          {initials(student.user.name)}
                         </div>
                         {isActive && <HandRing size={48} />}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-heading font-bold text-[#2C2A24] text-sm leading-tight text-left" style={{ fontFamily: '"Nunito", sans-serif' }}>
-                          {student.name}
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-heading font-bold text-[#2C2A24] text-sm leading-tight text-left truncate" style={{ fontFamily: '"Nunito", sans-serif' }}>
+                          {student.user.name}
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className={`text-[10px] font-heading font-extrabold uppercase px-1.5 py-0.5 rounded border ${badgeColor}`}>
-                            {student.status}
+                            {status}
                           </span>
-                          {student.status === "Approved" && <GoldStarSmall size={12} />}
+                          {status === "Approved" && <GoldStarSmall size={12} />}
                         </div>
                       </div>
                     </div>
@@ -343,7 +439,7 @@ export default function ReportGeneratorPage() {
             {/* Column Header */}
             <div className="bg-[#FDFBF5] border-b-2 border-[#E8E4D9] px-6 py-4 shrink-0 flex justify-between items-center">
               <span className="font-heading font-extrabold text-[#2C2A24] text-lg" style={{ fontFamily: '"Nunito", sans-serif' }}>
-                {selectedStudent.name} <span className="text-[#7A7670] font-semibold">· Progress Report</span>
+                {selectedStudent?.user?.name || "Select a Student"} <span className="text-[#7A7670] font-semibold">· Progress Report</span>
               </span>
               <span className="px-3 py-1 bg-[#D6EAF8] text-[#2471A3] border-2 border-[#4A90D9] rounded-full text-xs font-bold uppercase" style={{ fontFamily: '"Nunito", sans-serif' }}>
                 Term 2
@@ -351,9 +447,9 @@ export default function ReportGeneratorPage() {
             </div>
             
             {/* Document Scroll Area */}
-            <div className="flex-1 overflow-y-auto bg-[#E8E4D9]/30 p-6 md:p-8 flex justify-center custom-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-[#E8E4D9]/30 p-6 md:p-8 flex justify-center items-start custom-scrollbar">
               {/* Actual Paper Document */}
-              <div className="bg-white max-w-2xl w-full min-h-[800px] shadow-sm border border-[#E8E4D9] p-10 pt-12 relative flex flex-col">
+              <div className="bg-white max-w-2xl w-full h-fit min-h-[800px] shadow-sm border border-[#E8E4D9] p-10 pt-12 relative flex flex-col">
                 <div className="w-full h-2 bg-[#F5A623] absolute top-0 left-0" />
                 
                 {/* Letterhead */}
@@ -365,69 +461,100 @@ export default function ReportGeneratorPage() {
                   <p className="text-xs text-[#7A7670] font-mono mt-1 tracking-wider uppercase">Excellence in Education</p>
                 </div>
                 
-                {/* Student Info Table */}
-                <div className="grid grid-cols-2 gap-4 border-2 border-[#2C2A24] rounded-sm p-4 mb-8 text-sm">
-                  <div><span className="text-[#7A7670] font-bold inline-block w-20">Student:</span> <span className="font-serif font-bold text-base">{selectedStudent.name}</span></div>
-                  <div><span className="text-[#7A7670] font-bold inline-block w-20">Class:</span> <span className="font-serif font-bold text-base">8-A</span></div>
-                  <div><span className="text-[#7A7670] font-bold inline-block w-20">Roll No:</span> <span className="font-serif font-bold text-base">{(selectedStudent.id + 12).toString().padStart(2, '0')}</span></div>
-                  <div><span className="text-[#7A7670] font-bold inline-block w-20">Term:</span> <span className="font-serif font-bold text-base">2 (2025)</span></div>
-                </div>
-                
-                {/* AI Text Narrative */}
-                <h3 className="font-serif text-lg font-bold text-[#2C2A24] mb-3 uppercase tracking-wider relative inline-block">
-                  Teacher's Remarks
-                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#4A90D9] w-12" />
-                </h3>
-                
-                <div className="relative z-0">
-                  <div className="font-serif text-[15px] leading-loose text-[#2C2A24] text-justify whitespace-pre-wrap">
-                    {MOCK_REPORT_TEXT(selectedStudent.name)}
+                {selectedStudent ? (
+                  <>
+                    {/* Student Info Table */}
+                    <div className="grid grid-cols-2 gap-4 border-2 border-[#2C2A24] rounded-sm p-4 mb-8 text-sm">
+                      <div><span className="text-[#7A7670] font-bold inline-block w-20">Student:</span> <span className="font-serif font-bold text-base">{selectedStudent.user.name}</span></div>
+                      <div><span className="text-[#7A7670] font-bold inline-block w-20">Class:</span> <span className="font-serif font-bold text-base">{selectedStudent.class?.name || "N/A"}-{selectedStudent.class?.section || "N/A"}</span></div>
+                      <div><span className="text-[#7A7670] font-bold inline-block w-20">Roll No:</span> <span className="font-serif font-bold text-base">{selectedStudent.roll_no}</span></div>
+                      <div><span className="text-[#7A7670] font-bold inline-block w-20">Term:</span> <span className="font-serif font-bold text-base">2 (2025)</span></div>
+                    </div>
+                    
+                    {/* AI Text Narrative */}
+                    <h3 className="font-serif text-lg font-bold text-[#2C2A24] mb-3 uppercase tracking-wider relative inline-block">
+                      Teacher's Remarks
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#4A90D9] w-12" />
+                    </h3>
+                    
+                    <div className="relative z-0 min-h-[200px]">
+                      {currentReport ? (
+                        currentReport.approved ? (
+                          <div className="w-full font-serif text-[15px] leading-loose text-[#2C2A24] text-justify bg-transparent py-2">
+                             {currentReport.content.split('\n').filter((p: string) => p.trim() !== '').map((para: string, idx: number) => (
+                               <p key={idx} className="mb-5 indent-8">{para}</p>
+                             ))}
+                          </div>
+                        ) : (
+                          <div className="relative mb-6 group">
+                            <textarea 
+                              id="report-textarea"
+                              className="w-full font-serif text-[15px] leading-loose text-[#2C2A24] text-justify bg-white border-2 border-dashed border-[#F5A623]/50 focus:border-[#F5A623] focus:outline-none focus:ring-0 resize-none p-6 rounded-xl min-h-[400px] overflow-hidden"
+                              value={currentReport.content}
+                              onChange={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = (e.target.scrollHeight) + 'px';
+                                setCurrentReport({ ...currentReport, content: e.target.value });
+                              }}
+                            />
+                            <div className="absolute top-0 right-0 -mt-3 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <span className="text-xs font-bold text-white bg-[#F5A623] px-3 py-1 rounded-full shadow-sm">Editable Draft</span>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full py-10 text-center opacity-50">
+                           <LightbulbIcon size={48} />
+                           {generating ? (
+                             <p className="mt-4 font-serif italic">AI is crafting a personalized report...</p>
+                           ) : (
+                             <div className="mt-4">
+                               <p className="font-serif italic font-bold">No report draft generated yet.</p>
+                               <button 
+                                 onClick={handleGenerate}
+                                 className="mt-4 px-6 py-2 bg-[#F5A623] text-white rounded-lg font-bold"
+                               >
+                                 Generate Draft
+                               </button>
+                             </div>
+                           )}
+                        </div>
+                      )}
+                      
+                      {currentReport && (
+                        <>
+                          {/* Subtle highlighter effect behind text */}
+                          <div className="absolute top-[28px] left-0 w-[40%] h-4 bg-[#FFD6E0] opacity-30 -z-10 mix-blend-multiply" />
+                          <div className="absolute top-[88px] left-[5%] w-[80%] h-4 bg-[#FEF9E7] opacity-60 -z-10 mix-blend-multiply" />
+                        </>
+                      )}
+                    </div>
+
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-[#7A7670] font-serif italic">
+                    Select a student to view or generate reports
                   </div>
-                  {/* Subtle highlighter effect behind text */}
-                  <div className="absolute top-[28px] left-0 w-[40%] h-4 bg-[#FFD6E0] opacity-30 -z-10 mix-blend-multiply" />
-                  <div className="absolute top-[88px] left-[5%] w-[80%] h-4 bg-[#FEF9E7] opacity-60 -z-10 mix-blend-multiply" />
-                </div>
-                
-                {/* Grades Summary */}
-                <div className="mt-8">
-                  <h3 className="font-serif text-sm font-bold text-[#7A7670] mb-3 uppercase tracking-wider">Academic Overview</h3>
-                  <table className="w-full text-sm font-serif border-collapse">
-                    <tbody>
-                      <tr className="border-b border-[#E8E4D9]"><td className="py-2">Mathematics</td><td className="text-right font-bold">92% (A)</td></tr>
-                      <tr className="border-b border-[#E8E4D9]"><td className="py-2">Science</td><td className="text-right font-bold">88% (B+)</td></tr>
-                      <tr className="border-b border-[#E8E4D9]"><td className="py-2">English</td><td className="text-right font-bold">95% (A+)</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                {/* Signatures */}
-                <div className="mt-auto pt-16 flex justify-between px-8">
-                  <div className="text-center w-40 border-t border-[#2C2A24] pt-2 text-sm font-serif text-[#7A7670] relative">
-                    {/* Fake signature */}
-                    <span className="absolute bottom-6 left-1/2 -translate-x-1/2 text-2xl opacity-60 text-[#2471A3]" style={{ fontFamily: '"Caveat", cursive', transform: "translateX(-50%) rotate(-5deg)" }}>M. Sharma</span>
-                    Class Teacher
-                  </div>
-                  <div className="text-center w-40 border-t border-[#2C2A24] pt-2 text-sm font-serif text-[#7A7670]">
-                    Principal
-                  </div>
-                </div>
+                )}
               </div>
             </div>
             
             {/* Footer Actions */}
             <div className="bg-[#FDFBF5] border-t-2 border-[#E8E4D9] p-4 shrink-0 flex items-center justify-between">
-              <button className="flex items-center gap-2 px-4 py-2 border-2 border-[#2C2A24] rounded-[10px] bg-white font-heading font-bold text-sm hover:bg-[#FDFBF5] hover:shadow-[2px_2px_0px_#2C2A24] transition-all">
+              <button 
+                onClick={handleGenerate}
+                disabled={generating || !selectedStudent}
+                className="flex items-center gap-2 px-4 py-2 border-2 border-[#2C2A24] rounded-[10px] bg-white font-heading font-bold text-sm hover:bg-[#FDFBF5] hover:shadow-[2px_2px_0px_#2C2A24] transition-all disabled:opacity-50">
                 <RefreshIcon size={14} />
-                Regenerate
+                {generating ? "Generating..." : "Regenerate"}
               </button>
               
               <div className="flex gap-3">
-                <button className="px-6 py-2 border-2 border-[#2C2A24] rounded-[10px] bg-white font-heading font-bold text-sm hover:bg-[#EEF5FF] transition-all">
-                  Edit Text
-                </button>
-                <button className="flex items-center gap-2 px-8 py-2 border-2 border-[#2C2A24] rounded-[10px] bg-[#5BAD6F] text-white font-heading font-extrabold text-sm shadow-[3px_3px_0px_#2C2A24] hover:shadow-[1px_1px_0px_#2C2A24] hover:translate-x-[2px] w-[200px] justify-center hover:translate-y-[2px] transition-all">
+                <button className="flex items-center gap-2 px-8 py-2 border-2 border-[#2C2A24] rounded-[10px] bg-[#5BAD6F] text-white font-heading font-extrabold text-sm shadow-[3px_3px_0px_#2C2A24] hover:shadow-[1px_1px_0px_#2C2A24] hover:translate-x-[2px] w-[200px] justify-center hover:translate-y-[2px] transition-all disabled:opacity-50"
+                  onClick={handleApprove}
+                  disabled={approving || !currentReport || currentReport.approved}>
                   <CheckmarkWhite size={18} />
-                  Approve Report
+                  {approving ? "Approving..." : currentReport?.approved ? "Approved" : "Approve Report"}
                 </button>
               </div>
             </div>
@@ -447,10 +574,13 @@ export default function ReportGeneratorPage() {
                 <span className="block font-heading font-bold text-sm text-[#7A7670] mb-3">Tone</span>
                 <div className="flex flex-col gap-2">
                   {["Encouraging", "Neutral", "Formal"].map(t => (
-                    <label key={t} className="flex items-center gap-3 cursor-pointer group">
-                      <div className="group-hover:scale-110 transition-transform"><RadioDoodle checked={tone === t} /></div>
-                      <span className={`font-body text-sm font-medium ${tone === t ? "text-[#2C2A24]" : "text-[#7A7670]"}`}
-                        onClick={() => setTone(t)}>{t}</span>
+                    <label key={t} onClick={() => setTone(t)} className="flex items-center gap-3 cursor-pointer group">
+                      <div className="group-hover:scale-110 transition-transform flex items-center justify-center pointer-events-none">
+                         <RadioDoodle checked={tone === t} />
+                      </div>
+                      <span className={`font-body text-sm font-medium pointer-events-none ${tone === t ? "text-[#2C2A24]" : "text-[#7A7670]"}`}>
+                        {t}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -497,7 +627,7 @@ export default function ReportGeneratorPage() {
               <ul className="space-y-3 relative z-10">
                 <li className="flex items-start gap-2">
                   <div className="mt-0.5 shrink-0"><TinyArrowDoodle /></div>
-                  <span className="font-body text-sm font-medium text-[#2C2A24]">{selectedStudent.name.split(" ")[0]} improved 12% in Math this term <span className="text-[#5BAD6F] font-bold">↑</span></span>
+                  <span className="font-body text-sm font-medium text-[#2C2A24]">{selectedStudent?.user?.name ? selectedStudent.user.name.split(" ")[0] : "The student"} improved 12% in Math this term <span className="text-[#5BAD6F] font-bold">↑</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <div className="mt-0.5 shrink-0"><TinyArrowDoodle /></div>
