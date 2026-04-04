@@ -36,7 +36,8 @@ const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
 const aiRoutes = require('./src/routes/ai');
 const questRoutes = require('./src/routes/quests');
-const duelRoutes = require('./src/routes/duels');
+const subBriefingRoutes = require('./src/routes/subBriefings');
+const ptmRoutes = require('./src/routes/ptm');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -100,6 +101,8 @@ app.use('/api/quests', questRoutes);
 app.use('/api/duels', duelRoutes);
 app.use('/api/mood', moodRoutes);
 app.use('/api/timecapsule', timeCapsuleRoutes);
+app.use('/api/substitution', subBriefingRoutes);
+app.use('/api/ptm', ptmRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
