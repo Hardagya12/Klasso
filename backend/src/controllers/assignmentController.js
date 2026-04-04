@@ -12,9 +12,9 @@ const getAssignments = async (req, res, next) => {
     const school_id = req.user.school_id;
     const { page, limit, offset } = req.pagination;
 
-    const conditions = ['a.school_id = $1'];
-    const params = [school_id];
-    let idx = 2;
+    const conditions = [];
+    const params = [];
+    let idx = 1;
 
     if (req.user.role === 'student') {
       const stuRes = await query('SELECT class_id FROM students WHERE user_id=$1', [req.user.id]);
@@ -29,12 +29,12 @@ const getAssignments = async (req, res, next) => {
 
     if (class_subject_id) { conditions.push(`a.class_subject_id = $${idx++}`); params.push(class_subject_id); }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const totalRes = await query(
       `SELECT COUNT(*) FROM assignments a
        JOIN class_subjects cs ON cs.id = a.class_subject_id
-       WHERE ${whereClause}`,
+       ${whereClause}`,
       params
     );
     const total = parseInt(totalRes.rows[0].count, 10);
@@ -48,7 +48,7 @@ const getAssignments = async (req, res, next) => {
        JOIN subjects s ON s.id = cs.subject_id
        JOIN users u ON u.id = a.created_by
        LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id
-       WHERE ${whereClause}
+       ${whereClause}
        GROUP BY a.id, cs.class_id, c.name, s.name, u.name
        ORDER BY a.due_date DESC
        LIMIT $${idx++} OFFSET $${idx++}`,
@@ -85,9 +85,9 @@ const createAssignment = async (req, res, next) => {
     const school_id = req.user.school_id;
 
     const result = await query(
-      `INSERT INTO assignments (school_id, class_subject_id, title, description, due_date, max_marks, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [school_id, class_subject_id, title, description, due_date, max_marks, req.user.id]
+      `INSERT INTO assignments (class_subject_id, title, description, due_date, max_marks, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [class_subject_id, title, description, due_date, max_marks, req.user.id]
     );
     const assignment = result.rows[0];
 
