@@ -59,8 +59,10 @@ export default function TeacherDashboard() {
   const [moodData, setMoodData] = useState<any>(null);
   const [unread, setUnread] = useState(0);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let cancelled = false;
     void (async () => {
       const results = await Promise.allSettled([
@@ -121,12 +123,16 @@ export default function TeacherDashboard() {
     } catch(e) {}
   };
 
-  const headerDate = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const headerDate = mounted
+    ? new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+
+  if (!mounted) return null;
 
   return (
     <div

@@ -87,6 +87,10 @@ export async function apiData<T>(path: string, init: RequestInit = {}): Promise<
   const res = await rawFetch(path, init, true);
   const json = (await res.json().catch(() => ({}))) as Envelope<T> & { message?: string };
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("klasso_token");
+      window.location.href = "/login";
+    }
     throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
   if (json.success === false) {
@@ -99,6 +103,10 @@ export async function apiData<T>(path: string, init: RequestInit = {}): Promise<
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const res = await rawFetch(path, init, true);
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("klasso_token");
+      window.location.href = "/login";
+    }
     const json = (await res.json().catch(() => ({}))) as { message?: string };
     throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
@@ -109,6 +117,10 @@ export async function apiPaginated<T>(path: string): Promise<Paginated<T>> {
   const res = await rawFetch(path, {}, true);
   const json = (await res.json().catch(() => ({}))) as Paginated<T> & { message?: string };
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("klasso_token");
+      window.location.href = "/login";
+    }
     throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
   if (json.success === false) {

@@ -17,14 +17,7 @@ export default function MessagesPage() {
 
   const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-    fetchMessages();
-  }, []);
-
-  if (!isMounted) return null;
-
-  const fetchMessages = async () => {
+  const fetchMessages = React.useCallback(async () => {
     try {
       const dbInbox = await apiPaginated<any>("/api/messages/inbox");
       const dbSent = await apiPaginated<any>("/api/messages/sent");
@@ -97,12 +90,19 @@ export default function MessagesPage() {
     } catch (err) {
       console.error("Failed to fetch messages", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+    fetchMessages();
+  }, [fetchMessages]);
 
   // Derive the active conversation
   const activeConversation = useMemo(() => 
     conversations.find(c => c.id === activeId) || null
   , [conversations, activeId]);
+
+  if (!isMounted) return null;
 
   const handleSelect = async (id: string) => {
     setActiveId(id);
