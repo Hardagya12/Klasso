@@ -24,7 +24,7 @@ const TABS = ['Overview', 'Attendance', 'Grades', 'Messages'];
 const TEACHER_MESSAGES = [
   {
     id: '1', name: 'Mrs. D\'Souza', subject: 'English', initials: 'DD',
-    lastMsg: 'Arjun\'s project was excellent this week!',
+    lastMsg: 'The project was excellent this week!',
     time: '2h ago', unread: 0, online: false,
   },
   {
@@ -252,9 +252,9 @@ const OverviewTab = ({ data }: { data: any }) => {
       </View>
 
       {[
-        'Arjun improved 14% in Math this term',
+        `${data?.student?.name?.split(' ')[0] || 'Child'} improved 14% in Math this term`,
         'Science attendance dropped last week',
-        '2 assignments overdue this week',
+        `${data?.pending_assignments?.length || 0} assignments overdue this week`,
       ].map((insight, i) => (
         <View key={i} style={styles.insightRow}>
           <DoodleArrow size={14} color={Colors.mint} />

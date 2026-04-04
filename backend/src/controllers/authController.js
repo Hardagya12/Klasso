@@ -198,10 +198,15 @@ const getMe = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
+    const [firstName, ...rest] = (user.name || '').split(' ');
+    const lastName = rest.join(' ');
+
     // Build response with snake_case for frontend compatibility
     const response = {
       id: user.id,
       name: user.name,
+      firstName,
+      lastName,
       email: user.email,
       role: user.role,
       school_id: user.schoolId,
@@ -222,11 +227,7 @@ const getMe = async (req, res, next) => {
         admission_no: user.studentProfile.admissionNo,
         dob: user.studentProfile.dob,
         gender: user.studentProfile.gender,
-        class: user.studentProfile.class ? {
-          id: user.studentProfile.class.id,
-          name: user.studentProfile.class.name,
-          section: user.studentProfile.class.section,
-        } : null,
+        class_name: user.studentProfile.class ? `${user.studentProfile.class.name}-${user.studentProfile.class.section}` : null,
       };
     }
 

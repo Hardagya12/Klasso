@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity, Easing, SafeAreaView, Dimensions, Alert, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiData as api } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { 
   DoodleSparkle, DoodleStar, DoodlePencil, DoodleLightbulb,
   DoodleBook, DoodleStarburst, DoodleRocket, DoodleLeaf
@@ -32,8 +33,9 @@ export default function TimeCapsuleScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // Ideally fetch from student state, mocking studentId for now.
-  const studentId = "current-student-id"; 
+  const { user } = useAuth();
+  const { studentId: paramId } = useLocalSearchParams();
+  const studentId = paramId || user?.student?.id || user?.id;
 
   useEffect(() => {
     fetchTimeCapsule();

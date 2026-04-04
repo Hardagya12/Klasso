@@ -65,7 +65,7 @@ const fmtT = (t: any): string => {
 };
 
 // ── TeacherHomeScreen ─────────────────────────────────────────────────────────
-function TeacherHomeScreen({ user }: { user: { name?: string; role?: string } }) {
+function TeacherHomeScreen({ user, logout }: { user: { name?: string; role?: string }, logout: () => void }) {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [subs, setSubs] = useState<SubRow[]>([]);
@@ -206,6 +206,17 @@ function TeacherHomeScreen({ user }: { user: { name?: string; role?: string } })
             </View>
           ))}
 
+          {/* Teacher Logout */}
+          <TouchableOpacity
+            onPress={logout}
+            style={{ alignItems: 'center', marginTop: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: TC.coralLight, borderRadius: 12 }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontFamily: 'Nunito_700Bold', fontSize: 15, color: TC.coral }}>
+              Log out
+            </Text>
+          </TouchableOpacity>
+
           <View style={{ height: 100 }} />
         </Animated.View>
       </ScrollView>
@@ -291,7 +302,7 @@ function fmtTime(s: string) {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [dash, setDash] = useState<StudentDash | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [moodCheckedIn, setMoodCheckedIn] = useState(true);
@@ -329,7 +340,7 @@ export default function HomeScreen() {
 
   // ── Teacher / Admin home ─────────────────────────────────────────
   if (user && user.role !== 'student') {
-    return <TeacherHomeScreen user={user} />;
+    return <TeacherHomeScreen user={user} logout={logout} />;
   }
 
 
@@ -502,6 +513,17 @@ export default function HomeScreen() {
         >
           <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 13, color: '#6B8C82' }}>
             Switch to Parent View →
+          </Text>
+        </TouchableOpacity>
+
+        {/* Logout */}
+        <TouchableOpacity
+          onPress={logout}
+          style={{ alignItems: 'center', marginTop: 16, marginBottom: 4, paddingVertical: 12, borderWidth: 1.5, borderColor: '#FFE5E5', borderRadius: 12, backgroundColor: Colors.surface }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ fontFamily: Fonts.heading, fontSize: 14, color: Colors.coral }}>
+            Log out
           </Text>
         </TouchableOpacity>
 

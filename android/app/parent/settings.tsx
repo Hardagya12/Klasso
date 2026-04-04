@@ -12,6 +12,8 @@ import {
   DoodleCircleDot,
   Colors, Fonts, retroShadow, Radius,
 } from '@/src/components';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiData } from '@/lib/api';
 
 // ─── Gear SVG ────────────────────────────────────────────────────────────────
 const DoodleGear = ({ size = 28, color = Colors.mint }: { size?: number; color?: string }) => (
@@ -143,9 +145,17 @@ const NOTIF_TOGGLES = [
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 export default function Settings() {
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
+  const [childrenList, setChildrenList] = useState<any[]>([]);
   const [notifToggles, setNotifToggles] = useState<Record<string, boolean>>({
     attendance: true, grades: true, homework: false, messages: true, fees: true,
   });
+
+  React.useEffect(() => {
+    apiData<{ children: any[] }>('/api/analytics/parent')
+      .then(res => setChildrenList(res?.children || []))
+      .catch(console.error);
+  }, []);
 
   const toggle = (id: string) =>
     setNotifToggles(prev => ({ ...prev, [id]: !prev[id] }));
@@ -164,22 +174,22 @@ export default function Settings() {
 
         {/* Profile section */}
         <View style={styles.profileSection}>
-          <KlassoAvatar name="Mrs Mehta" size={60} />
-          <Text style={styles.profileName}>Mrs. Anjali Mehta</Text>
-          <Text style={styles.profileEmail}>anjali.mehta@gmail.com</Text>
+          <KlassoAvatar name={user?.name || 'Parent'} size={60} />
+          <Text style={styles.profileName}>{user?.name}</Text>
+          <Text style={styles.profileEmail}>{user?.email || 'parent@klasso.app'}</Text>
         </View>
 
         {/* ── Section 1: My Children ── */}
         <SectionCard title="My Children">
-          {CHILDREN.map((child, i) => (
+          {childrenList.map((childNode, i) => (
             <SettingsRow
-              key={child.id}
-              icon={<KlassoAvatar name={child.name} size={32} />}
-              label={child.name}
-              noBorder={i === CHILDREN.length - 1 && false}
+              key={childNode.student?.id}
+              icon={<KlassoAvatar name={childNode.student?.name} size={32} />}
+              label={childNode.student?.name}
+              noBorder={i === childrenList.length - 1}
               right={
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {child.primary && <KlassoBadge label="Primary" color="mint" />}
+                  {i === 0 && <KlassoBadge label="Primary" color="mint" />}
                   <DoodleArrow size={14} color={Colors.textLight} />
                 </View>
               }
@@ -253,6 +263,7 @@ export default function Settings() {
             label="Log out"
             variant="coral"
             size="lg"
+            onPress={logout}
             style={{ alignSelf: 'stretch' }}
           />
         </View>

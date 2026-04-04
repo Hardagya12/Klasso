@@ -323,7 +323,7 @@ export default function ParentHome() {
         {/* ── TODAY'S SCHEDULE ── */}
         <View style={styles.sectionHeader}>
           <DoodleRuler size={22} color={Colors.yellow} />
-          <Text style={styles.sectionTitle}>Arjun's Day Today</Text>
+          <Text style={styles.sectionTitle}>{child?.name?.split(' ')[0] || 'Child'}'s Day Today</Text>
         </View>
         <View style={[styles.scheduleCard, retroShadow(3, 3, Colors.shadow)]}>
           {scheduleParams.map((item: any, idx: number) => (

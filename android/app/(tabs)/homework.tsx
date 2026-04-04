@@ -174,13 +174,20 @@ export default function HomeworkScreen() {
   }, []);
 
   const toggleTask = (id: number) => {
-    // Mock toggle for UI (in a real app, this would call a mark-done endpoint)
-    setTasks(prev => prev.map(t => {
-      if (t.id === id) {
-        return { ...t, status: t.status === 'done' ? 'pending' : 'done' };
-      }
-      return t;
-    }));
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    
+    // Optimistic update
+    const isNowDone = task.status !== 'done';
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: isNowDone ? 'done' : 'pending' } : t));
+
+    if (isNowDone) {
+      apiData(`/api/assignments/${id}/submit`, { method: 'POST' }).catch(err => {
+        console.error('Submit failed', err);
+        // Revert on fail
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'pending' } : t));
+      });
+    }
   };
 
   const filteredTasks = tasks.filter(t => {

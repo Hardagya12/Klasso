@@ -41,6 +41,8 @@ const generateForClass = async (req, res, next) => {
   }
 };
 
+const { query } = require('../db/neon');
+
 /**
  * GET /api/timecapsule/student/:studentId
  */
@@ -51,20 +53,31 @@ const getStudentCapsule = async (req, res, next) => {
 
     // Auth check: parent/student can only check their own unless teacher/admin
     if (['student', 'parent'].includes(req.user.role)) {
-       const userStudentCheck = await prisma.student.findUnique({ where: { id: studentId } });
-       // Assuming parent's id connects or is skipped for simplicity inside this hackathon bound.
-       if (userStudentCheck.userId !== req.user.id && req.user.role === 'student') {
+       const userStudentCheck = await query('SELECT * FROM students WHERE id=$1', [studentId]);
+       if (!userStudentCheck.rows.length) return sendError(res, 'Student not found', 404);
+       
+       if (userStudentCheck.rows[0].user_id !== req.user.id && req.user.role === 'student') {
          return sendError(res, 'Unauthorized', 403);
        }
     }
 
-    const capsule = await prisma.timeCapsule.findUnique({
-      where: {
-        studentId_academicYear: { studentId, academicYear }
-      }
-    });
+    const { rows } = await query(
+      'SELECT id, student_id, academic_year, data, ai_narrative, shareable_card_url, is_published, created_at, updated_at FROM time_capsules WHERE student_id=$1 AND academic_year=$2',
+      [studentId, academicYear]
+    );
 
-    if (!capsule) return sendError(res, 'Time Capsule not found', 404);
+    if (!rows.length) return sendError(res, 'Time Capsule not found', 404);
+    
+    // Map to camelCase for frontend
+    const capsule = {
+      id: rows[0].id,
+      studentId: rows[0].student_id,
+      academicYear: rows[0].academic_year,
+      data: rows[0].data,
+      aiNarrative: rows[0].ai_narrative,
+      shareableCardUrl: rows[0].shareable_card_url,
+      isPublished: true
+    };
     
     return sendSuccess(res, capsule);
   } catch (error) {
@@ -77,11 +90,12 @@ const getStudentCapsule = async (req, res, next) => {
  */
 const getCardImage = async (req, res, next) => {
   try {
-    const capsule = await prisma.timeCapsule.findUnique({ where: { id: req.params.id } });
-    if (!capsule || !capsule.shareableCardUrl) return res.status(404).send('Not found');
+    const { rows } = await query('SELECT shareable_card_url FROM time_capsules WHERE id=$1', [req.params.id]);
+    const capsule = rows[0];
+    if (!capsule || !capsule.shareable_card_url) return res.status(404).send('Not found');
 
     // /uploads/timecapsules/xxx.png
-    const fileName = path.basename(capsule.shareableCardUrl);
+    const fileName = path.basename(capsule.shareable_card_url);
     const filePath = path.join(__dirname, '../../uploads/timecapsules', fileName);
 
     if (fs.existsSync(filePath)) {

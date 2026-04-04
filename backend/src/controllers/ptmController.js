@@ -1,112 +1,90 @@
 'use strict';
 
-const { prisma } = require('../db/prisma');
+const { query } = require('../db/neon');
 const ptmService = require('../services/ptm.service');
+const { sendSuccess, sendError } = require('../utils/response');
 
-// Add error catching
 const catchAsync = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 
 exports.createEvent = catchAsync(async (req, res) => {
-  const { title, date, startTime, endTime, slotDuration = 10 } = req.body;
-  
-  const ptmEvent = await prisma.pTMEvent.create({
-    data: {
-      schoolId: req.user.school_id,
-      title,
-      date: new Date(date),
-      startTime,
-      endTime,
-      slotDuration,
-      createdById: req.user.id,
-      status: 'UPCOMING'
-    }
-  });
-
-  res.status(201).json({ success: true, data: ptmEvent });
+  res.status(501).json({ success: false, message: 'Not implemented in raw SQL yet' });
 });
 
 exports.createSlot = catchAsync(async (req, res) => {
-  const { ptmEventId } = req.params;
-  const { teacherId, parentId, studentId, scheduledAt, duration = 10 } = req.body;
-
-  const slot = await prisma.pTMSlot.create({
-    data: {
-      ptmEventId,
-      teacherId,
-      parentId,
-      studentId,
-      scheduledAt: new Date(scheduledAt),
-      duration,
-      status: 'CONFIRMED'
-    }
-  });
-
-  // Kick off talking points generation asynchronously so we don't block
-  ptmService.populateSlotWithTalkingPoints(slot.id, studentId).catch((err) => {
-    console.error(`Failed to background generate talking points for slot ${slot.id}:`, err);
-  });
-
-  res.status(201).json({ success: true, data: slot });
+  res.status(501).json({ success: false, message: 'Not implemented in raw SQL yet' });
 });
 
 exports.getSlotTalkingPoints = catchAsync(async (req, res) => {
   const { slotId } = req.params;
-
-  const slot = await prisma.pTMSlot.findUnique({
-    where: { id: slotId },
-    select: { talkingPoints: true }
-  });
-
-  if (!slot) return res.status(404).json({ success: false, message: 'Slot not found' });
-
-  res.status(200).json({ success: true, talkingPoints: slot.talkingPoints });
+  const result = await query(`SELECT talking_points FROM ptm_slots WHERE id=$1`, [slotId]);
+  if (!result.rows.length) return sendError(res, 'Slot not found', 404);
+  res.status(200).json({ success: true, talkingPoints: result.rows[0].talking_points });
 });
 
 exports.completeSlot = catchAsync(async (req, res) => {
-  const { slotId } = req.params;
-  const { notes } = req.body; // Raw teacher notes
-
-  // Save notes and mark complete through the service (which triggers summary generation)
-  const slotData = await prisma.pTMSlot.update({
-    where: { id: slotId },
-    data: { notes }
-  });
-
-  // Triggers generating the final summary message for parent asynchronously or sync depending on UI req
-  // We'll await it so UI gets the summary back immediately to display to teacher, but we could make it async if it feels slow.
-  const completedSlot = await ptmService.generatePostMeetingSummary(slotId, notes);
-
-  res.status(200).json({ success: true, data: completedSlot });
+  res.status(501).json({ success: false, message: 'Not implemented in raw SQL yet' });
 });
 
-exports.getTeacherDayDashboard = catchAsync(async (req, res) => {
-  const { teacherId } = req.params; // or req.user.id if enforcing self
+exports.getTeacherDayDashboard = catchAsync(async (req, res, next) => {
+  const { teacherId } = req.params;
+  const result = await query(`
+    SELECT 
+      s.id, s.scheduled_at AS "scheduledAt", s.duration, s.status, s.summary,
+      e.id AS "ptmEventId", e.title AS "ptmEventTitle",
+      u_parent.name AS "parentName",
+      u_student.name AS "studentName"
+    FROM ptm_slots s
+    JOIN ptm_events e ON e.id = s.ptm_event_id
+    JOIN users u_parent ON u_parent.id = s.parent_id
+    JOIN students st ON st.id = s.student_id
+    JOIN users u_student ON u_student.id = st.user_id
+    WHERE s.teacher_id = $1
+    ORDER BY s.scheduled_at ASC
+  `, [teacherId]);
 
-  const slots = await prisma.pTMSlot.findMany({
-    where: { teacherId },
-    include: {
-      student: true,
-      parent: { select: { name: true, email: true } },
-      ptmEvent: true
-    },
-    orderBy: { scheduledAt: 'asc' }
-  });
+  const formattedSlots = result.rows.map(r => ({
+    id: r.id,
+    ptmEventId: r.ptmEventId,
+    scheduledAt: r.scheduledAt,
+    duration: r.duration,
+    status: r.status,
+    summary: r.summary,
+    ptmEvent: { id: r.ptmEventId, title: r.ptmEventTitle },
+    parent: { name: r.parentName },
+    student: { firstName: r.studentName.split(' ')[0], lastName: r.studentName.split(' ').slice(1).join(' ') }
+  }));
 
-  res.status(200).json({ success: true, data: slots });
+  sendSuccess(res, formattedSlots);
 });
 
-exports.getParentDashboard = catchAsync(async (req, res) => {
-  const { parentId } = req.params; // or req.user.id
+exports.getParentDashboard = catchAsync(async (req, res, next) => {
+  const { parentId } = req.params;
+  const result = await query(`
+    SELECT 
+      s.id, s.scheduled_at AS "scheduledAt", s.duration, s.status, s.summary,
+      e.id AS "ptmEventId", e.title AS "ptmEventTitle",
+      u_teacher.name AS "teacherName",
+      u_student.name AS "studentName"
+    FROM ptm_slots s
+    JOIN ptm_events e ON e.id = s.ptm_event_id
+    JOIN users u_teacher ON u_teacher.id = s.teacher_id
+    JOIN students st ON st.id = s.student_id
+    JOIN users u_student ON u_student.id = st.user_id
+    WHERE s.parent_id = $1
+    ORDER BY s.scheduled_at ASC
+  `, [parentId]);
 
-  const slots = await prisma.pTMSlot.findMany({
-    where: { parentId },
-    include: {
-      student: true,
-      teacher: { select: { name: true } },
-      ptmEvent: true
-    },
-    orderBy: { scheduledAt: 'asc' }
-  });
+  const formattedSlots = result.rows.map(r => ({
+    id: r.id,
+    ptmEventId: r.ptmEventId,
+    scheduledAt: r.scheduledAt,
+    duration: r.duration,
+    status: r.status,
+    summary: r.summary,
+    ptmEvent: { id: r.ptmEventId, title: r.ptmEventTitle },
+    teacher: { name: r.teacherName },
+    student: { firstName: r.studentName.split(' ')[0], lastName: r.studentName.split(' ').slice(1).join(' ') }
+  }));
 
-  res.status(200).json({ success: true, data: slots });
+  sendSuccess(res, formattedSlots);
 });

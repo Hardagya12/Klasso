@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const xpController = require('../controllers/classXpController');
-const { requireAuth } = require('../middleware/auth');
+const { authenticateJWT } = require('../middleware/auth');
 
 // Apply auth to all XP routes
-router.use(requireAuth);
+router.use(authenticateJWT);
 
 router.get('/class/:classId', xpController.getClassXpDetails);
 router.post('/class/:classId/bonus', xpController.awardBonusXp);
