@@ -2,7 +2,12 @@
 
 const { sendSuccess, sendError } = require('../utils/response');
 const moodService = require('../services/mood.service');
-const prisma = require('../db/prisma');
+const { prisma } = require('../db/prisma');
+
+/** Prisma client must be regenerated (`npm run prisma:generate`) after schema changes or delegates stay missing. */
+function assertPrismaMoodModels() {
+  return !!(prisma?.moodAlert && prisma?.moodCheckIn && prisma?.class);
+}
 
 /**
  * POST /api/mood/checkin
@@ -10,6 +15,13 @@ const prisma = require('../db/prisma');
  */
 const postCheckIn = async (req, res, next) => {
   try {
+    if (!assertPrismaMoodModels()) {
+      return sendError(
+        res,
+        'Server needs Prisma client update. In backend folder run: npm run prisma:generate',
+        503
+      );
+    }
     const { mood, note } = req.body;
     if (!mood) return sendError(res, 'Mood is required', 400);
 
@@ -68,6 +80,13 @@ const postCheckIn = async (req, res, next) => {
  */
 const getMySummary = async (req, res, next) => {
   try {
+    if (!assertPrismaMoodModels()) {
+      return sendError(
+        res,
+        'Server needs Prisma client update. In backend folder run: npm run prisma:generate',
+        503
+      );
+    }
     const studentIdResult = await prisma.student.findUnique({
       where: { userId: req.user.id },
       select: { id: true }
@@ -90,6 +109,16 @@ const getMySummary = async (req, res, next) => {
  */
 const getTeacherAlerts = async (req, res, next) => {
   try {
+    if (!assertPrismaMoodModels()) {
+      console.error(
+        '[mood] Prisma client is missing Mood models. Run: cd backend && npm run prisma:generate'
+      );
+      return sendSuccess(res, {
+        alerts: [],
+        classAggregate: { GREAT: 0, GOOD: 0, OKAY: 0, SAD: 0, STRESSED: 0, total: 0 },
+      });
+    }
+
     const alerts = await prisma.moodAlert.findMany({
       where: { teacherId: req.user.id },
       orderBy: { createdAt: 'desc' }
@@ -145,6 +174,13 @@ const getTeacherAlerts = async (req, res, next) => {
  */
 const markAlertRead = async (req, res, next) => {
   try {
+    if (!assertPrismaMoodModels()) {
+      return sendError(
+        res,
+        'Server needs Prisma client update. In backend folder run: npm run prisma:generate',
+        503
+      );
+    }
     const alertId = req.params.id;
     const alert = await prisma.moodAlert.updateMany({
       where: { 

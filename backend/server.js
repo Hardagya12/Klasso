@@ -36,11 +36,14 @@ const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
 const aiRoutes = require('./src/routes/ai');
 const questRoutes = require('./src/routes/quests');
+const duelRoutes = require('./src/routes/duels');
 const subBriefingRoutes = require('./src/routes/subBriefings');
 const ptmRoutes = require('./src/routes/ptm');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const BASE_PORT = Number(process.env.PORT) || 3001;
+/** Try BASE_PORT, then BASE_PORT+1 … if previous ports are taken (EADDRINUSE). */
+const MAX_PORT_OFFSET = Number(process.env.PORT_RANGE) || 20;
 
 // ── Global Middleware ──────────────────────────────────────────────────────────
 app.use(helmet());
@@ -115,11 +118,42 @@ app.use(errorHandler);
 // ── Start ──────────────────────────────────────────────────────────────────────
 const start = async () => {
   await testConnection();
-  server.listen(PORT, () => {
-    console.log(`🚀  Klasso API running on http://localhost:${PORT}`);
-    console.log(`📦  Environment: ${process.env.NODE_ENV}`);
-    console.log(`⚡  Socket.IO real-time enabled`);
-  });
+
+  const tryListen = (port) => {
+    server.removeAllListeners('error');
+    server.once('error', (err) => {
+      if (err.code !== 'EADDRINUSE') {
+        console.error('HTTP server error:', err);
+        process.exit(1);
+        return;
+      }
+      const next = port + 1;
+      if (next > BASE_PORT + MAX_PORT_OFFSET) {
+        console.error(
+          `No free port between ${BASE_PORT} and ${next - 1}. Close other apps or set PORT in .env.`
+        );
+        process.exit(1);
+        return;
+      }
+      console.warn(`⚠️  Port ${port} is in use — trying ${next} …`);
+      tryListen(next);
+    });
+
+    server.listen(port, () => {
+      if (port !== BASE_PORT) {
+        console.warn(
+          `\n⚠️  API bound on port ${port} (default ${BASE_PORT} was busy).\n` +
+            `   Point the frontend at this URL, e.g. in frontend/.env.local:\n` +
+            `   NEXT_PUBLIC_API_URL=http://localhost:${port}\n`
+        );
+      }
+      console.log(`🚀  Klasso API running on http://localhost:${port}`);
+      console.log(`📦  Environment: ${process.env.NODE_ENV}`);
+      console.log(`⚡  Socket.IO real-time enabled`);
+    });
+  };
+
+  tryListen(BASE_PORT);
 };
 
 start().catch((err) => {

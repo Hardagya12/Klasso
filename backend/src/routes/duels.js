@@ -5,8 +5,8 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 router.use(requireAuth);
 
-router.post('/', requireRole(['TEACHER', 'ADMIN', 'SUPER_ADMIN']), duelController.createDuel);
+router.post('/', requireRole('TEACHER', 'ADMIN', 'SUPER_ADMIN'), duelController.createDuel);
 router.get('/:id/results', duelController.getDuelResults);
-router.get('/class/:classId', requireRole(['TEACHER', 'ADMIN', 'SUPER_ADMIN']), duelController.getClassDuels);
+router.get('/class/:classId', requireRole('TEACHER', 'ADMIN', 'SUPER_ADMIN'), duelController.getClassDuels);
 
 module.exports = router;

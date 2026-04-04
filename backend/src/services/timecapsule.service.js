@@ -1,6 +1,6 @@
 'use strict';
 
-const prisma = require('../db/prisma');
+const { prisma } = require('../db/prisma');
 const nodeHtmlToImage = require('node-html-to-image');
 const path = require('path');
 const fs = require('fs');

@@ -2,7 +2,7 @@
 
 const { sendSuccess, sendError } = require('../utils/response');
 const timecapsuleService = require('../services/timecapsule.service');
-const prisma = require('../db/prisma');
+const { prisma } = require('../db/prisma');
 const path = require('path');
 const fs = require('fs');
 

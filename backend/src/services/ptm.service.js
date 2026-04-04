@@ -1,6 +1,6 @@
 'use strict';
 
-const prisma = require('../../prisma/prismaClient');
+const { prisma } = require('../db/prisma');
 const { generatePTMTalkingPoints, generatePTMPostSummary } = require('../utils/claudeApi');
 
 /**

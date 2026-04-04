@@ -53,10 +53,18 @@ const authenticateJWT = async (req, res, next) => {
 /**
  * authorizeRole(...roles)
  * Returns middleware that allows only users whose role is in the given list.
+ * Comparison is case-insensitive so routes can use TEACHER/teacher and DB can store either.
  */
 const authorizeRole = (...roles) => {
+  const allowed = new Set(roles.map((r) => String(r).toUpperCase()));
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required role(s): ${roles.join(', ')}`,
+      });
+    }
+    if (!allowed.has(String(req.user.role).toUpperCase())) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Required role(s): ${roles.join(', ')}`,
@@ -82,8 +90,8 @@ const authorizeOwnerOrRole = (getEntityUserId, ...roles) => {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      // Allow if user has one of the privileged roles
-      if (roles.includes(req.user.role)) {
+      const allowed = new Set(roles.map((r) => String(r).toUpperCase()));
+      if (allowed.has(String(req.user.role).toUpperCase())) {
         return next();
       }
 
@@ -103,4 +111,22 @@ const authorizeOwnerOrRole = (getEntityUserId, ...roles) => {
   };
 };
 
-module.exports = { authenticateJWT, authorizeRole, authorizeOwnerOrRole };
+/** Aliases used by some route modules */
+const requireAuth = authenticateJWT;
+const requireRole = authorizeRole;
+const protect = authenticateJWT;
+const restrictTo = authorizeRole;
+
+/** Same as authorizeRole (kept for route files that import this name) */
+const authorizeRoles = authorizeRole;
+
+module.exports = {
+  authenticateJWT,
+  authorizeRole,
+  authorizeOwnerOrRole,
+  requireAuth,
+  requireRole,
+  authorizeRoles,
+  protect,
+  restrictTo,
+};

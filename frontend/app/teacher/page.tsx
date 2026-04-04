@@ -63,20 +63,24 @@ export default function TeacherDashboard() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const [d, c, m] = await Promise.all([
-          apiData<TeacherDash>("/api/analytics/teacher"),
-          apiData<{ unread?: number }>("/api/notifications/count"),
-          apiData<any>("/api/mood/alerts")
-        ]);
-        if (!cancelled) {
-          setDash(d);
-          setUnread(typeof c?.unread === "number" ? c.unread : 0);
-          setMoodData(m);
-        }
-      } catch (e) {
-        if (!cancelled) setLoadErr(e instanceof Error ? e.message : "Failed to load dashboard");
+      const results = await Promise.allSettled([
+        apiData<TeacherDash>("/api/analytics/teacher"),
+        apiData<{ unread?: number }>("/api/notifications/count"),
+        apiData<{ alerts?: unknown[]; classAggregate?: Record<string, number> }>("/api/mood/alerts"),
+      ]);
+      if (cancelled) return;
+
+      const [dashRes, notifRes, moodRes] = results;
+      if (dashRes.status === "fulfilled") setDash(dashRes.value);
+      else setLoadErr(dashRes.reason instanceof Error ? dashRes.reason.message : "Failed to load dashboard");
+
+      if (notifRes.status === "fulfilled") {
+        const c = notifRes.value;
+        setUnread(typeof c?.unread === "number" ? c.unread : 0);
       }
+
+      if (moodRes.status === "fulfilled") setMoodData(moodRes.value);
+      else console.warn("Mood alerts failed:", moodRes.reason);
     })();
     return () => {
       cancelled = true;

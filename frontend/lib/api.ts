@@ -1,12 +1,13 @@
 /**
  * Klasso API client — talks to backend Express server.
- * Set NEXT_PUBLIC_API_URL (e.g. http://localhost:3001)
+ * Set NEXT_PUBLIC_API_URL (e.g. http://localhost:3001) — must match the port where `npm run dev` runs in /backend.
+ * Always use an absolute URL so SSR and the browser both hit Express, not Next.js (which has no /api proxy).
  */
-
-const API_BASE =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001")
-    : "";
+function getApiBase(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  return "http://localhost:3001";
+}
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -47,7 +48,8 @@ async function rawFetch(
   init: RequestInit = {},
   requireAuth = true
 ): Promise<Response> {
-  const url = `${API_BASE}${path}`;
+  const base = getApiBase();
+  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
@@ -56,14 +58,36 @@ async function rawFetch(
     const t = getToken();
     if (t) headers.set("Authorization", `Bearer ${t}`);
   }
-  return fetch(url, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers });
+  } catch (e) {
+    const msg =
+      e instanceof Error ? e.message : "Network error";
+    throw new ApiError(
+      `${msg} — is the backend running at ${base}? Set NEXT_PUBLIC_API_URL if it uses another port.`,
+      0
+    );
+  }
+  return res;
+}
+
+function errorMessageFromResponse(
+  res: Response,
+  json: { message?: string }
+): string {
+  const hint =
+    res.status === 404
+      ? " Not found — check NEXT_PUBLIC_API_URL matches your backend port."
+      : "";
+  return (json.message || res.statusText || "Request failed") + hint;
 }
 
 export async function apiData<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await rawFetch(path, init, true);
   const json = (await res.json().catch(() => ({}))) as Envelope<T> & { message?: string };
   if (!res.ok) {
-    throw new ApiError(json.message || res.statusText || "Request failed", res.status);
+    throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
   if (json.success === false) {
     throw new ApiError(json.message || "Request failed", res.status);
@@ -76,7 +100,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const res = await rawFetch(path, init, true);
   if (!res.ok) {
     const json = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new ApiError(json.message || res.statusText || "Request failed", res.status);
+    throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
   return res;
 }
@@ -85,7 +109,7 @@ export async function apiPaginated<T>(path: string): Promise<Paginated<T>> {
   const res = await rawFetch(path, {}, true);
   const json = (await res.json().catch(() => ({}))) as Paginated<T> & { message?: string };
   if (!res.ok) {
-    throw new ApiError(json.message || res.statusText || "Request failed", res.status);
+    throw new ApiError(errorMessageFromResponse(res, json), res.status);
   }
   if (json.success === false) {
     throw new ApiError(json.message || "Request failed", res.status);
@@ -100,7 +124,10 @@ export async function loginRequest(email: string, password: string) {
     false
   );
   const json = (await res.json().catch(() => ({}))) as Envelope<{ token: string; user: Record<string, unknown> }>;
-  if (!res.ok || !json.success || !json.data?.token) {
+  if (!res.ok) {
+    throw new ApiError(errorMessageFromResponse(res, json), res.status);
+  }
+  if (!json.success || !json.data?.token) {
     throw new ApiError(json.message || "Login failed", res.status);
   }
   return json.data;

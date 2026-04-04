@@ -1,6 +1,6 @@
 'use strict';
 
-const prisma = require('../db/prisma'); // Assuming there's a central prisma client
+const { prisma } = require('../db/prisma');
 const { generateMoodAlertMessage } = require('../utils/claudeApi');
 
 // Converts Enum to number for calculation

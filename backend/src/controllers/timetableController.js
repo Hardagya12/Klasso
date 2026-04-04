@@ -3,6 +3,7 @@
 const { query } = require('../db/neon');
 const { sendSuccess, sendError } = require('../utils/response');
 const { createNotification } = require('../utils/notificationHelper');
+const { generateSubBriefing } = require('../services/subbriefing.service');
 
 // ─── GET /api/timetable ───────────────────────────────────────────────────────
 const getTimetable = async (req, res, next) => {
@@ -154,7 +155,7 @@ const createSubstitution = async (req, res, next) => {
     const { timetable_slot_id, date, substitute_teacher_id, reason = null } = req.body;
 
     const result = await query(
-      `INSERT INTO substitutions (timetable_slot_id, date, substitute_teacher_id, reason, assigned_by)
+      `INSERT INTO substitutions (timetable_slot_id, date, substitute_teacher_id, reason, created_by)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [timetable_slot_id, date, substitute_teacher_id, reason, req.user.id]
     );
@@ -166,6 +167,11 @@ const createSubstitution = async (req, res, next) => {
       'Substitution Assigned',
       `You have been assigned as a substitute on ${date}.`,
       'info', 'substitution', sub.id
+    );
+
+    // Generate AI briefing asynchronously — do not block the response
+    generateSubBriefing(sub.id).catch((err) =>
+      console.error('[SubBriefing] Background generation error:', err.message)
     );
 
     return sendSuccess(res, sub, 'Substitution created', 201);

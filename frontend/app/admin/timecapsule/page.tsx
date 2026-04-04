@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { apiData } from "../../../lib/api";
 
 type ClassData = {
@@ -29,16 +29,18 @@ const DoodleSparkle = ({ size, color }: { size: number; color?: string }) => (
 export default function AdminTimeCapsulePage() {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [statuses, setStatuses] = useState<Record<string, "pending" | "generating" | "ready">>({});
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [overallProgress, setOverallProgress] = useState(0);
 
-  useEffect(() => {
-    fetchClasses();
-  }, []);
+  type ApiClass = {
+    id: string;
+    name: string;
+    section: string;
+    students?: unknown[];
+  };
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     try {
-      const data = await apiData<any[]>("/api/classes");
+      const data = await apiData<ApiClass[]>("/api/classes");
       const mapped = data.map((c) => ({
         id: c.id,
         name: c.name,
@@ -46,14 +48,20 @@ export default function AdminTimeCapsulePage() {
         studentCount: c.students?.length || Math.floor(Math.random() * 20) + 10 // Safe fallback
       }));
       setClasses(mapped);
-      
-      const initStatus: any = {};
-      mapped.forEach(c => initStatus[c.id] = "pending");
+
+      const initStatus: Record<string, "pending" | "generating" | "ready"> = {};
+      mapped.forEach((c) => {
+        initStatus[c.id] = "pending";
+      });
       setStatuses(initStatus);
     } catch (e) {
       console.warn(e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchClasses();
+  }, [fetchClasses]);
 
   const generateForClass = async (classId: string) => {
     setStatuses(prev => ({ ...prev, [classId]: "generating" }));
@@ -64,7 +72,7 @@ export default function AdminTimeCapsulePage() {
         setStatuses(prev => ({ ...prev, [classId]: "ready" }));
         setOverallProgress(prev => Math.min(100, prev + (100 / classes.length)));
       }, 5000); // UI illusion for long-running process
-    } catch (e) {
+    } catch {
       setStatuses(prev => ({ ...prev, [classId]: "pending" }));
     }
   };

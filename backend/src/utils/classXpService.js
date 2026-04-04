@@ -1,4 +1,4 @@
-const prisma = require('../db/prisma');
+const { prisma } = require('../db/prisma');
 
 const XP_LEVELS = [
   { level: 1, title: 'Seedlings', min: 0, max: 499 },

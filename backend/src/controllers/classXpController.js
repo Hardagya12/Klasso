@@ -1,5 +1,5 @@
 const xpService = require('../utils/classXpService');
-const prisma = require('../db/prisma');
+const { prisma } = require('../db/prisma');
 
 exports.getClassXpDetails = async (req, res) => {
   try {
@@ -19,8 +19,8 @@ exports.awardBonusXp = async (req, res) => {
     const { classId } = req.params;
     const { xp, reason } = req.body;
     
-    // Ensure requesting user is teacher or admin (authMiddleware handles req.user)
-    if (!req.user || (req.user.role !== 'teacher' && req.user.role !== 'admin')) {
+    const allowed = new Set(['TEACHER', 'ADMIN', 'SUPER_ADMIN']);
+    if (!req.user || !allowed.has(String(req.user.role).toUpperCase())) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const prisma = require('../../prisma/prismaClient');
+const { prisma } = require('../db/prisma');
 const ptmService = require('../services/ptm.service');
 
 // Add error catching
@@ -11,7 +11,7 @@ exports.createEvent = catchAsync(async (req, res) => {
   
   const ptmEvent = await prisma.pTMEvent.create({
     data: {
-      schoolId: req.user.schoolId,
+      schoolId: req.user.school_id,
       title,
       date: new Date(date),
       startTime,
