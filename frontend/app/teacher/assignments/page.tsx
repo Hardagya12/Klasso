@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
+import { apiData, apiFetch, apiPaginated } from "../../../lib/api";
 import { 
   Plus, 
   Search, 
@@ -31,23 +32,43 @@ import CreateAssignmentModal from "./components/CreateAssignmentModal";
 import SubmissionsDrawer from "./components/SubmissionsDrawer";
 
 // --- Mock Data ---
-const INITIAL_ASSIGNMENTS = [
-  { id: "1", title: "Algebraic Expressions Quiz", subject: "Mathematics", classSection: "8-A", dueDate: "2024-04-10", totalMarks: 100, submissions: 24, totalStudents: 32, status: "Active" },
-  { id: "2", title: "Photosynthesis Lab Report", subject: "Science", classSection: "8-C", dueDate: "2024-04-05", totalMarks: 50, submissions: 18, totalStudents: 28, status: "Active" },
-  { id: "3", title: "Shakespeare Sonnets Analysis", subject: "English", classSection: "9-B", dueDate: "2024-04-02", totalMarks: 75, submissions: 30, totalStudents: 30, status: "Active" },
-  { id: "4", title: "Industrial Revolution Timeline", subject: "History", classSection: "8-B", dueDate: "2024-04-08", totalMarks: 100, submissions: 12, totalStudents: 32, status: "Active" },
-  { id: "5", title: "Geometry Basics Homework", subject: "Mathematics", classSection: "8-A", dueDate: "2024-03-25", totalMarks: 20, submissions: 32, totalStudents: 32, status: "Archived" },
-  { id: "6", title: "Chemical Reactions Worksheet", subject: "Science", classSection: "10-A", dueDate: "2024-04-15", totalMarks: 40, submissions: 5, totalStudents: 25, status: "Active" },
-  { id: "7", title: "Global Warming Essay", subject: "English", classSection: "8-A", dueDate: "2024-03-20", totalMarks: 100, submissions: 28, totalStudents: 32, status: "Archived" },
-];
+// Remove INITIAL_ASSIGNMENTS
 
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState(INITIAL_ASSIGNMENTS);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"Active" | "Archived">("Active");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAssignments();
+  }, []);
+
+  const fetchAssignments = async () => {
+    setLoading(true);
+    try {
+      const res = await apiData<any[]>("/api/assignments");
+      // Map backend status or derive it
+      const mapped = res.map(a => ({
+        ...a,
+        subject: a.subject_name,
+        classSection: `${a.class_name}-${a.section}`,
+        dueDate: a.due_date,
+        totalMarks: a.max_marks,
+        submissions: a.submission_count || 0,
+        totalStudents: 30, // Mock for now or fetch
+        status: new Date(a.due_date) < new Date() ? "Archived" : "Active"
+      }));
+      setAssignments(mapped);
+    } catch (err) {
+      console.error("Failed to fetch assignments", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredAssignments = assignments.filter(a => 
     a.status === activeTab && 
@@ -55,7 +76,8 @@ export default function AssignmentsPage() {
   );
 
   const handlePublish = (newAssignment: any) => {
-    setAssignments([newAssignment, ...assignments]);
+    fetchAssignments(); // Refresh from server
+    setIsModalOpen(false);
   };
 
   const handleViewSubmissions = (id: string) => {
@@ -69,9 +91,14 @@ export default function AssignmentsPage() {
     // Future expansion: Open edit modal
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this assignment?")) {
-      setAssignments(assignments.filter(a => a.id !== id));
+      try {
+        await apiFetch(`/api/assignments/${id}`, { method: "DELETE" });
+        setAssignments(prev => prev.filter(a => a.id !== id));
+      } catch (err: any) {
+        alert(err.message || "Failed to delete assignment");
+      }
     }
   };
 

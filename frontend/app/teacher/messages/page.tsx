@@ -1,186 +1,154 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
 import { NotebookTexture, ScatteredDoodles } from "../../components/dashboard/DashboardComponents";
 import ConversationList from "./components/ConversationList";
 import ChatWindow from "./components/ChatWindow";
 import NewMessageModal from "./components/NewMessageModal";
 
-// --- Mock Data ---
-const INITIAL_CONVERSATIONS = [
-  {
-    id: "1",
-    contactName: "Aarav Patel",
-    role: "Student",
-    avatarColor: "#D6EAF8",
-    lastMessage: "I finished the homework assignment early!",
-    timestamp: "10:30 AM",
-    unreadCount: 2,
-    messages: [
-      { id: "m1", text: "Hello teacher, can you help me with question 4?", sender: "them", timestamp: "Yesterday" },
-      { id: "m2", text: "Of course Aarav, what part is confusing?", sender: "me", timestamp: "Yesterday" },
-      { id: "m3", text: "The part about the square root of 256.", sender: "them", timestamp: "Yesterday" },
-      { id: "m4", text: "I finished the homework assignment early!", sender: "them", timestamp: "10:30 AM" },
-    ],
-  },
-  {
-    id: "2",
-    contactName: "Mr. Gupta",
-    role: "Parent",
-    avatarColor: "#D1F2EB",
-    lastMessage: "Will there be a parent-teacher meeting this Friday?",
-    timestamp: "9:45 AM",
-    unreadCount: 1,
-    messages: [
-      { id: "m5", text: "Hello Mrs. Sharma, just checking on Rohan's progress.", sender: "them", timestamp: "Two days ago" },
-      { id: "m6", text: "He is doing very well, especially in Math.", sender: "me", timestamp: "Yesterday" },
-      { id: "m7", text: "Will there be a parent-teacher meeting this Friday?", sender: "them", timestamp: "9:45 AM" },
-    ],
-  },
-  {
-    id: "3",
-    contactName: "HOD Science",
-    role: "Staff",
-    avatarColor: "#F5EEF8",
-    lastMessage: "The department meeting has been moved to Monday.",
-    timestamp: "Yesterday",
-    unreadCount: 0,
-    messages: [
-      { id: "m8", text: "Please submit your monthly reports by 5 PM today.", sender: "them", timestamp: "Three days ago" },
-      { id: "m9", text: "The department meeting has been moved to Monday.", sender: "them", timestamp: "Yesterday" },
-    ],
-  },
-  {
-    id: "4",
-    contactName: "Isha Sharma",
-    role: "Student",
-    avatarColor: "#FCF3CF",
-    lastMessage: "Thank you for the feedback on my essay!",
-    timestamp: "Monday",
-    unreadCount: 0,
-    messages: [
-      { id: "m10", text: "Great job on the essay Isha. Your analysis was deep.", sender: "me", timestamp: "Last week" },
-      { id: "m11", text: "Thank you for the feedback on my essay!", sender: "them", timestamp: "Monday" },
-    ],
-  },
-  {
-    id: "5",
-    contactName: "Mrs. Reddy",
-    role: "Parent",
-    avatarColor: "#FDEDEC",
-    lastMessage: "Ananya will be absent today due to a fever.",
-    timestamp: "2h ago",
-    unreadCount: 0,
-    messages: [
-      { id: "m12", text: "Ananya will be absent today due to a fever.", sender: "them", timestamp: "2h ago" },
-      { id: "m13", text: "Received. Hope she recovers soon!", sender: "me", timestamp: "1h ago" },
-    ],
-  },
-  {
-    id: "6",
-    contactName: "Grade 8-A Parents",
-    role: "Broadcast",
-    avatarColor: "#FFF2E0",
-    lastMessage: "Reminder: Science field trip forms are due tomorrow.",
-    timestamp: "11:00 AM",
-    unreadCount: 0,
-    messages: [
-      { id: "m14", text: "Reminder: Science field trip forms are due tomorrow.", sender: "me", timestamp: "11:00 AM" },
-    ],
-  },
-  {
-    id: "7",
-    contactName: "Vikram Singh",
-    role: "Staff",
-    avatarColor: "#EBEDEF",
-    lastMessage: "Can you swap your Friday lab period with me?",
-    timestamp: "Wednesday",
-    unreadCount: 0,
-    messages: [
-      { id: "m15", text: "Can you swap your Friday lab period with me?", sender: "them", timestamp: "Wednesday" },
-    ],
-  },
-  {
-    id: "8",
-    contactName: "Meera Singh",
-    role: "Student",
-    avatarColor: "#D6EAF8",
-    lastMessage: "Is the test going to be all multiple choice?",
-    timestamp: "Today",
-    unreadCount: 0,
-    messages: [
-      { id: "m16", text: "Is the test going to be all multiple choice?", sender: "them", timestamp: "Today" },
-    ],
-  },
-];
-
+import { apiData, apiPaginated, apiFetch } from "../../../lib/api";
 export default function MessagesPage() {
-  const [conversations, setConversations] = useState<any[]>(INITIAL_CONVERSATIONS);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const dbInbox = await apiPaginated<any>("/api/messages/inbox");
+      const dbSent = await apiPaginated<any>("/api/messages/sent");
+      
+      const inboxList = dbInbox.data || [];
+      const sentList = dbSent.data || [];
+      
+      const convMap = new Map();
+
+      const COLORS = ["#D6EAF8", "#D1F2EB", "#F5EEF8", "#FCF3CF", "#FDEDEC", "#FFF2E0", "#EBEDEF"];
+
+      inboxList.forEach((m: any) => {
+        const cId = m.sender_id;
+        if (!convMap.has(cId)) {
+          convMap.set(cId, {
+            id: cId,
+            contactName: m.sender_name,
+            role: m.sender_role || "User",
+            avatarColor: COLORS[parseInt(cId) % COLORS.length] || "#D6EAF8",
+            lastMessage: m.body,
+            timestamp: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            unreadCount: 0,
+            messages: []
+          });
+        }
+        const c = convMap.get(cId);
+        c.messages.push({
+          id: m.id,
+          text: m.body || m.subject,
+          sender: "them",
+          timestamp: new Date(m.created_at).toLocaleString()
+        });
+        if (!m.is_read) c.unreadCount++;
+      });
+
+      sentList.forEach((m: any) => {
+        const cId = m.recipient_id;
+        if (!convMap.has(cId)) {
+          convMap.set(cId, {
+            id: cId,
+            contactName: m.recipient_name,
+            role: m.recipient_role || "User",
+            avatarColor: COLORS[parseInt(cId) % COLORS.length] || "#D1F2EB",
+            lastMessage: m.body,
+            timestamp: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            unreadCount: 0,
+            messages: []
+          });
+        }
+        const c = convMap.get(cId);
+        c.messages.push({
+          id: m.id,
+          text: m.body || m.subject,
+          sender: "me",
+          timestamp: new Date(m.created_at).toLocaleString()
+        });
+      });
+
+      const convArray = Array.from(convMap.values());
+      convArray.forEach(c => {
+        c.messages.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        if (c.messages.length > 0) {
+           c.lastMessage = c.messages[c.messages.length-1].text;
+           c.timestamp = c.messages[c.messages.length-1].timestamp;
+        }
+      });
+      convArray.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setConversations(convArray);
+    } catch (err) {
+      console.error("Failed to fetch messages", err);
+    }
+  };
 
   // Derive the active conversation
   const activeConversation = useMemo(() => 
     conversations.find(c => c.id === activeId) || null
   , [conversations, activeId]);
 
-  const handleSelect = (id: string) => {
+  const handleSelect = async (id: string) => {
     setActiveId(id);
-    // Mark as read
-    setConversations(prev => prev.map(c => 
-      c.id === id ? { ...c, unreadCount: 0 } : c
-    ));
-  };
-
-  const handleSendMessage = (text: string) => {
-    if (!activeId) return;
-    
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeId) {
-        const newMessage = {
-          id: 'm' + Date.now(),
-          text,
-          sender: "me",
-          timestamp: "Just now"
-        };
-        return {
-          ...c,
-          messages: [...c.messages, newMessage],
-          lastMessage: text,
-          timestamp: "Just now"
-        };
+    const conv = conversations.find(c => c.id === id);
+    if (conv && conv.unreadCount > 0) {
+      setConversations(prev => prev.map(c => 
+        c.id === id ? { ...c, unreadCount: 0 } : c
+      ));
+      
+      const unreadMsgs = conv.messages.filter((m: any) => m.sender === 'them');
+      for (const msg of unreadMsgs) {
+         try {
+           await apiFetch(`/api/messages/${msg.id}/read`, { method: "PUT" });
+         } catch(e) {}
       }
-      return c;
-    }));
+    }
   };
 
-  const handleNewMessageSend = (data: any) => {
-    // For demo purposes, we'll just log this and add a mock toast
-    console.log("Sending message data:", data);
-    
-    if (data.isBroadcast) {
-       // Add a new broadcast conversation to the list
-       const newConv = {
-         id: 'b' + Date.now(),
-         contactName: data.to.join(', ') + ' Broadcast',
-         role: 'Broadcast',
-         avatarColor: '#FFF2E0',
-         lastMessage: data.message,
-         timestamp: 'Just now',
-         unreadCount: 0,
-         messages: [{ id: 'bm1', text: data.message, sender: 'me', timestamp: 'Just now' }]
-       };
-       setConversations([newConv, ...conversations]);
-       setActiveId(newConv.id);
-    } else {
-       // Individual message logic
-       // check if conversation exists with the first recipient
-       const recipientId = data.to[0];
-       // (Simplified for demo: just create a new one or use existing)
-       alert("Message sent successfully!");
+  const handleSendMessage = async (text: string) => {
+    if (!activeId) return;
+    try {
+      await apiData<any>("/api/messages", {
+        method: "POST",
+        body: JSON.stringify({ recipient_id: activeId, body: text })
+      });
+      fetchMessages();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleNewMessageSend = async (data: any) => {
+    try {
+      if (data.isBroadcast) {
+          for (const recipientId of data.to) {
+              await apiData<any>("/api/messages", {
+                method: "POST",
+                body: JSON.stringify({ recipient_id: recipientId, body: data.message })
+              });
+          }
+      } else {
+          const recipient_id = data.to[0]; 
+          await apiData<any>("/api/messages", {
+            method: "POST",
+            body: JSON.stringify({ recipient_id, body: data.message })
+          });
+      }
+      fetchMessages();
+      setIsModalOpen(false);
+    } catch(err) {
+      console.error(err);
     }
   };
 

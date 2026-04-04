@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
 import { 
   ChevronLeft, 
@@ -23,41 +23,55 @@ import TimetableGrid from "./components/TimetableGrid";
 import AddPeriodModal from "./components/AddPeriodModal";
 import WorkloadSidebar from "./components/WorkloadSidebar";
 
-// --- Mock Data ---
-const MOCK_TEACHERS = [
-  { id: "T1", name: "Mrs. Anjali Gupta" },
-  { id: "T2", name: "Prof. Rajesh Sharma" },
-];
-
-const MOCK_CLASSES = ["Grade 8-A", "Grade 8-B", "Grade 8-C", "Grade 9-A"];
-
-const INITIAL_TIMETABLE_DATA = [
-  // Teacher 1 (Anjali) schedule
-  { day: 0, timeSlot: 0, subject: "Mathematics", classSection: "Grade 8-A", room: "101", type: "Lecture", teacherId: "T1" },
-  { day: 0, timeSlot: 2, subject: "Mathematics", classSection: "Grade 8-B", room: "102", type: "Lecture", teacherId: "T1" },
-  { day: 1, timeSlot: 1, subject: "Mathematics", classSection: "Grade 8-A", room: "101", type: "Lecture", teacherId: "T1" },
-  { day: 2, timeSlot: 0, subject: "Mathematics", classSection: "Grade 8-C", room: "103", type: "Lecture", teacherId: "T1" },
-  { day: 3, timeSlot: 3, subject: "Mathematics", classSection: "Grade 8-B", room: "102", type: "Lab",     teacherId: "T1" },
-  { day: 4, timeSlot: 1, subject: "Mathematics", classSection: "Grade 8-A", room: "101", type: "Lecture", teacherId: "T1" },
-  { day: 5, timeSlot: 0, subject: "Mathematics", classSection: "Grade 8-C", room: "103", type: "Lecture", teacherId: "T1" },
-
-  // Teacher 2 (Rajesh) schedule
-  { day: 0, timeSlot: 1, subject: "Science",  classSection: "Grade 8-A", room: "201", type: "Lab",     teacherId: "T2" },
-  { day: 1, timeSlot: 0, subject: "Science",  classSection: "Grade 8-C", room: "203", type: "Lecture", teacherId: "T2" },
-  { day: 2, timeSlot: 2, subject: "Science",  classSection: "Grade 8-B", room: "202", type: "Lecture", teacherId: "T2" },
-  { day: 4, timeSlot: 0, subject: "Science",  classSection: "Grade 8-A", room: "201", type: "Lecture", teacherId: "T2" },
-];
+import { apiData, apiFetch } from "../../../lib/api";
 
 export default function TimetablePage() {
   const [activeView, setActiveView] = useState<"My Schedule" | "Class View">("My Schedule");
-  const [selectedClass, setSelectedClass] = useState(MOCK_CLASSES[0]);
-  const [periods, setPeriods] = useState(INITIAL_TIMETABLE_DATA);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [classesList, setClassesList] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitial, setModalInitial] = useState<{day?: number, slot?: number}>({});
   const [conflictMsg, setConflictMsg] = useState<string | null>(null);
+  const [currentTeacherId, setCurrentTeacherId] = useState<number | string>("");
 
-  // Filter periods based on view
-  const currentTeacherId = "T1"; // Assuming logged in as Anjali
+  useEffect(() => {
+    fetchTimetableData();
+  }, []);
+
+  const fetchTimetableData = async () => {
+    try {
+       // Using token from API to identify
+       const [ttRes, classesRes] = await Promise.all([
+          apiData<any[]>("/api/timetable"),
+          apiData<any[]>("/api/classes")
+       ]);
+       
+       const mapped = ttRes.map((p: any) => ({
+          ...p,
+          day: p.day_of_week - 1, // backend uses 1-7 likely
+          timeSlot: p.period_number - 1,
+          subject: p.subject_name,
+          classSection: `${p.class_name}-${p.section}`,
+          teacherId: p.teacher_id || "T1", // Use real ID if available
+          room: p.room || "101",
+          type: "Lecture"
+       }));
+       
+       setPeriods(mapped);
+       
+       const cList = classesRes.map((c: any) => `${c.name}-${c.section}`);
+       setClassesList(cList);
+       if(cList.length > 0) setSelectedClass(cList[0]);
+       
+       // Guess standard teacher ID from available slots
+       if(mapped.length > 0) {
+          setCurrentTeacherId(mapped[0].teacherId);
+       }
+    } catch(err) {
+       console.error("Failed to load timetable", err);
+    }
+  };
   
   const filteredPeriods = useMemo(() => {
     if (activeView === "My Schedule") {
@@ -194,8 +208,8 @@ export default function TimetablePage() {
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
                   >
-                    {MOCK_CLASSES.map(cls => (
-                      <option key={cls} value={cls}>{cls}</option>
+                    {classesList.map((cls, idx) => (
+                      <option key={idx} value={cls}>{cls}</option>
                     ))}
                   </select>
                 </div>

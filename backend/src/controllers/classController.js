@@ -268,6 +268,23 @@ const getClassTimetable = async (req, res, next) => {
   }
 };
 
+// ── GET /api/classes/teacher/subjects ─────────────────────────────────────────
+const getTeacherClassSubjects = async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT cs.id AS class_subject_id, cs.class_id, cl.name AS class_name, cl.section,
+              s.id AS subject_id, s.name AS subject_name, s.code AS subject_code
+       FROM class_subjects cs
+       JOIN classes cl ON cl.id = cs.class_id
+       JOIN subjects s ON s.id = cs.subject_id
+       WHERE cs.teacher_id = $1
+       ORDER BY cl.name, cl.section, s.name`,
+      [req.user.id]
+    );
+    return sendSuccess(res, result.rows);
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getAllClasses,
   getClassById,
@@ -276,6 +293,7 @@ module.exports = {
   deleteClass,
   getClassStudents,
   getClassSubjects,
+  getTeacherClassSubjects,
   assignSubject,
   removeSubject,
   getClassTimetable,
