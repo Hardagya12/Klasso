@@ -3,6 +3,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../db/neon');
+const { prisma } = require('../db/prisma');
 const { sendSuccess, sendError } = require('../utils/response');
 
 const SALT_ROUNDS = 12;
@@ -30,6 +31,14 @@ const signToken = (user) =>
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
+/** Sign a refresh token */
+const signRefreshToken = (user) =>
+  jwt.sign(
+    { id: user.id, email: user.email },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh',
+    { expiresIn: '30d' }
+  );
+
 // ── Controllers ───────────────────────────────────────────────────────────────
 
 /**
@@ -55,7 +64,11 @@ const register = async (req, res, next) => {
       [name, email.toLowerCase(), password_hash, role, school_id]
     );
 
-    return sendSuccess(res, sanitizeUser(result.rows[0]), 'User registered successfully', 201);
+    const user = result.rows[0];
+    const token = signToken(user);
+    const refreshToken = signRefreshToken(user);
+
+    return sendSuccess(res, { token, refreshToken, user: sanitizeUser(user) }, 'User registered successfully', 201);
   } catch (err) {
     next(err);
   }
@@ -90,10 +103,11 @@ const login = async (req, res, next) => {
     user.last_login = new Date();
 
     const token = signToken(user);
+    const refreshToken = signRefreshToken(user);
 
     return sendSuccess(
       res,
-      { token, user: sanitizeUser(user) },
+      { token, refreshToken, user: sanitizeUser(user) },
       'Login successful'
     );
   } catch (err) {
@@ -103,20 +117,197 @@ const login = async (req, res, next) => {
 
 /**
  * GET /api/auth/me
- * Returns fresh user data from DB (no password).
+ * Returns fresh user data with role-specific info
  */
 const getMe = async (req, res, next) => {
   try {
-    const result = await query(
-      `SELECT id, name, email, role, school_id, phone, avatar_url, is_active, last_login, settings, created_at
-       FROM users WHERE id = $1`,
-      [req.user.id]
+    // Use Prisma to get user with role-specific relations
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        schoolId: true,
+        phone: true,
+        avatarUrl: true,
+        isActive: true,
+        lastLogin: true,
+        settings: true,
+        createdAt: true,
+        // Student profile
+        studentProfile: {
+          select: {
+            id: true,
+            classId: true,
+            rollNo: true,
+            admissionNo: true,
+            dob: true,
+            gender: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                section: true,
+                schoolId: true,
+              }
+            }
+          }
+        },
+        // Teacher's class subjects
+        classSubjectsTeaching: {
+          select: {
+            id: true,
+            classId: true,
+            subjectId: true,
+            class: { select: { id: true, name: true, section: true } },
+            subject: { select: { id: true, name: true, code: true } },
+          }
+        },
+        // Parent links to students
+        studentParentLinks: {
+          select: {
+            id: true,
+            isPrimary: true,
+            relation: true,
+            student: {
+              select: {
+                id: true,
+                rollNo: true,
+                classId: true,
+                user: { select: { id: true, name: true, email: true } },
+                class: { select: { id: true, name: true, section: true } },
+              }
+            }
+          }
+        },
+        // Classes as homeroom teacher
+        classesAsHomeroom: {
+          select: {
+            id: true,
+            name: true,
+            section: true,
+            schoolId: true,
+          }
+        },
+      }
+    });
+
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    // Build response with snake_case for frontend compatibility
+    const response = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      school_id: user.schoolId,
+      phone: user.phone,
+      avatar_url: user.avatarUrl,
+      is_active: user.isActive,
+      last_login: user.lastLogin,
+      settings: user.settings,
+      created_at: user.createdAt,
+    };
+
+    // Add role-specific data
+    if (user.role === 'student' && user.studentProfile) {
+      response.student = {
+        id: user.studentProfile.id,
+        class_id: user.studentProfile.classId,
+        roll_no: user.studentProfile.rollNo,
+        admission_no: user.studentProfile.admissionNo,
+        dob: user.studentProfile.dob,
+        gender: user.studentProfile.gender,
+        class: user.studentProfile.class ? {
+          id: user.studentProfile.class.id,
+          name: user.studentProfile.class.name,
+          section: user.studentProfile.class.section,
+        } : null,
+      };
+    }
+
+    if (user.role === 'teacher') {
+      response.classSubjects = user.classSubjectsTeaching.map(cs => ({
+        id: cs.id,
+        class_id: cs.classId,
+        subject_id: cs.subjectId,
+        class: cs.class ? { id: cs.class.id, name: cs.class.name, section: cs.class.section } : null,
+        subject: cs.subject ? { id: cs.subject.id, name: cs.subject.name, code: cs.subject.code } : null,
+      }));
+      response.homeroomClasses = user.classesAsHomeroom.map(c => ({
+        id: c.id,
+        name: c.name,
+        section: c.section,
+        school_id: c.schoolId,
+      }));
+    }
+
+    if (user.role === 'parent') {
+      response.children = user.studentParentLinks.map(link => ({
+        id: link.student.id,
+        is_primary: link.isPrimary,
+        relation: link.relation,
+        roll_no: link.student.rollNo,
+        class_id: link.student.classId,
+        user: link.student.user ? {
+          id: link.student.user.id,
+          name: link.student.user.name,
+          email: link.student.user.email,
+        } : null,
+        class: link.student.class ? {
+          id: link.student.class.id,
+          name: link.student.class.name,
+          section: link.student.class.section,
+        } : null,
+      }));
+    }
+
+    return sendSuccess(res, response);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/refresh
+ * Body: { refreshToken }
+ */
+const refreshTokenHandler = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return sendError(res, 'Refresh token required', 400);
+    }
+
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh'
     );
+
+    const result = await query(
+      'SELECT id, name, email, role, school_id, is_active FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
     if (!result.rows.length) {
       return sendError(res, 'User not found', 404);
     }
-    return sendSuccess(res, result.rows[0]);
+
+    const user = result.rows[0];
+    if (!user.is_active) {
+      return sendError(res, 'Account deactivated', 403);
+    }
+
+    const newToken = signToken(user);
+    return sendSuccess(res, { token: newToken }, 'Token refreshed');
   } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return sendError(res, 'Invalid or expired refresh token', 401);
+    }
     next(err);
   }
 };
@@ -202,4 +393,4 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe, updateProfile, changePassword, logout };
+module.exports = { register, login, getMe, updateProfile, changePassword, logout, refreshTokenHandler };

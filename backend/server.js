@@ -58,8 +58,11 @@ app.use(cors({
     if (corsOrigins.some((o) => o === origin)) return callback(null, true);
     return callback(null, false);
   },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true,
 }));
+app.options('*', cors()); // handle preflight
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));

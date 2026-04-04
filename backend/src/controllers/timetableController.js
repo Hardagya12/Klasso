@@ -11,7 +11,7 @@ const getTimetable = async (req, res, next) => {
     const { class_id } = req.query;
     const school_id = req.user.school_id;
 
-    const conditions = ['ts.school_id = $1'];
+    const conditions = ['c.school_id = $1'];
     const params = [school_id];
     let idx = 2;
 
@@ -49,9 +49,9 @@ const createSlot = async (req, res, next) => {
     const school_id = req.user.school_id;
 
     const result = await query(
-      `INSERT INTO timetable_slots (school_id, class_id, class_subject_id, day_of_week, period_number, start_time, end_time, room)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [school_id, class_id, class_subject_id, day_of_week, period_number, start_time, end_time, room]
+      `INSERT INTO timetable_slots (class_id, class_subject_id, day_of_week, period_number, start_time, end_time, room)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [class_id, class_subject_id, day_of_week, period_number, start_time, end_time, room]
     );
     return sendSuccess(res, result.rows[0], 'Timetable slot created', 201);
   } catch (err) { next(err); }
@@ -105,7 +105,7 @@ const getConflicts = async (req, res, next) => {
        JOIN users u ON u.id = cs1.teacher_id AND cs1.teacher_id = cs2.teacher_id
        JOIN classes c1 ON c1.id = ts1.class_id
        JOIN classes c2 ON c2.id = ts2.class_id
-       WHERE ts1.school_id = $1`,
+       WHERE c1.school_id = $1`,
       [school_id]
     );
     return sendSuccess(res, result.rows);
@@ -184,7 +184,7 @@ const getSubstitutions = async (req, res, next) => {
     const { date } = req.query;
     const school_id = req.user.school_id;
 
-    const conditions = ['ts.school_id = $1'];
+    const conditions = ['c.school_id = $1'];
     const params = [school_id];
     let idx = 2;
 

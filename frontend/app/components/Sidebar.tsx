@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../providers";
 import {
   PencilSVG, SquigglySVG,
   HouseDoodle, AttendanceDoodle, ChartDoodle, ReportDoodle,
@@ -45,7 +46,9 @@ const SidebarItem = ({ icon, label, path, active = false }: { icon: React.ReactN
 
 export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const isAdmin = pathname.startsWith('/admin');
+  const initials = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase() || '?';
 
   // Admin navigation items
   const adminNavItems = [
@@ -105,15 +108,15 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
             backgroundColor: "#FEF3DC", border: "2px solid #2C2A24",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: collapsed ? 14 : 18, color: "#2C2A24",
-          }}>{isAdmin ? 'A' : 'PS'}</div>
+          }}>{ initials }</div>
         </div>
         {!collapsed && (
           <>
             <p style={{ fontFamily: '"Nunito", sans-serif', fontWeight: 800, fontSize: 14, margin: "0 0 2px", color: "#2C2A24" }}>
-              {isAdmin ? 'Admin User' : 'Priya Sharma'}
+              {user?.name || 'Loading...'}
             </p>
             <p style={{ fontFamily: '"Caveat", cursive', fontSize: 14, color: "#7A7670", margin: 0 }}>
-              {isAdmin ? 'Administrator' : 'Grade 8 · Math & Science'}
+              {user?.role === 'admin' ? 'Administrator' : user?.role === 'teacher' ? 'Teacher' : user?.role || ''}
             </p>
           </>
         )}

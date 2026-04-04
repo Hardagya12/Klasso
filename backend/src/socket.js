@@ -1,7 +1,6 @@
 // backend/src/socket.js
 const { Server } = require('socket.io');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('./db/prisma');
 
 // active duel timers to clear them if needed
 const duelTimers = new Map();

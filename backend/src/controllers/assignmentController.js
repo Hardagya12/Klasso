@@ -12,7 +12,8 @@ const getAssignments = async (req, res, next) => {
     const school_id = req.user.school_id;
     const { page, limit, offset } = req.pagination;
 
-    const conditions = ['a.school_id = $1'];
+    // assignments table has no school_id — scope via class_subjects → classes
+    const conditions = ['c.school_id = $1'];
     const params = [school_id];
     let idx = 2;
 
@@ -34,6 +35,7 @@ const getAssignments = async (req, res, next) => {
     const totalRes = await query(
       `SELECT COUNT(*) FROM assignments a
        JOIN class_subjects cs ON cs.id = a.class_subject_id
+       JOIN classes c ON c.id = cs.class_id
        WHERE ${whereClause}`,
       params
     );
@@ -143,7 +145,7 @@ const deleteAssignment = async (req, res, next) => {
 const submitAssignment = async (req, res, next) => {
   try {
     const { id: assignment_id } = req.params;
-    const { file_url = null, notes = null } = req.body;
+    const { attachment_url = null, content = null } = req.body;
 
     // Get student id
     const stuRes = await query('SELECT id FROM students WHERE user_id=$1', [req.user.id]);
@@ -151,12 +153,12 @@ const submitAssignment = async (req, res, next) => {
     const student_id = stuRes.rows[0].id;
 
     const result = await query(
-      `INSERT INTO assignment_submissions (assignment_id, student_id, file_url, notes)
+      `INSERT INTO assignment_submissions (assignment_id, student_id, attachment_url, content)
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (assignment_id, student_id) DO UPDATE
-         SET file_url=EXCLUDED.file_url, notes=EXCLUDED.notes, submitted_at=NOW()
+         SET attachment_url=EXCLUDED.attachment_url, content=EXCLUDED.content, submitted_at=NOW()
        RETURNING *`,
-      [assignment_id, student_id, file_url, notes]
+      [assignment_id, student_id, attachment_url, content]
     );
 
     // Check quest completions (submission trigger)
@@ -173,7 +175,7 @@ const getSubmissions = async (req, res, next) => {
   try {
     const { id: assignment_id } = req.params;
     const result = await query(
-      `SELECT sub.*, u.name AS student_name, st.roll_number
+      `SELECT sub.*, u.name AS student_name, st.roll_no
        FROM assignment_submissions sub
        JOIN students st ON st.id = sub.student_id
        JOIN users u ON u.id = st.user_id

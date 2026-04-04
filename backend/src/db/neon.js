@@ -1,7 +1,11 @@
-const { Pool } = require('@neondatabase/serverless');
+              const { Pool } = require('@neondatabase/serverless');
+const WebSocket = require('ws');
+
+global.WebSocket = WebSocket;
 
 const pool = new Pool({
   connectionString: process.env.NEON_DATABASE_URL,
+  websocketConstructor: WebSocket,
 });
 
 const query = async (text, params) => {

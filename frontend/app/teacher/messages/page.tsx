@@ -15,9 +15,14 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
     fetchMessages();
   }, []);
+
+  if (!isMounted) return null;
 
   const fetchMessages = async () => {
     try {

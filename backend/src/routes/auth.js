@@ -10,6 +10,7 @@ const {
   updateProfile,
   changePassword,
   logout,
+  refreshTokenHandler,
 } = require('../controllers/authController');
 
 // POST /api/auth/register
@@ -25,6 +26,9 @@ router.post(
   validateBody(['email', 'password']),
   login
 );
+
+// POST /api/auth/refresh
+router.post('/refresh', refreshTokenHandler);
 
 // GET /api/auth/me
 router.get('/me', authenticateJWT, getMe);
