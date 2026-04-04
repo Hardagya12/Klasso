@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { KlassoButton } from './KlassoButton';
 import { DoodleSparkle } from './doodles';
-import { Colors, Fonts } from './theme';
+import { Colors, Fonts } from '../../constants/theme';
 
 export function LevelUpModal({ visible, newLevel, newTitle, onClose }: { visible: boolean, newLevel: number, newTitle: string, onClose: () => void }) {
   const scale = useRef(new Animated.Value(0)).current;

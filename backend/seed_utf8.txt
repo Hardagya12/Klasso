@@ -1,0 +1,78 @@
+﻿≡ƒî▒ Starting Klasso seed process...
+Transaction started.
+node : C:\Users\ishap\Downl
+oads\VS code\Klasso\backend
+\node_modules\@neondatabase
+\serverless\index.js:395
+At line:1 char:1
++ node src/db/seed.js > 
+seed_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (C:\  
+  Users\ishap\...ss\inde   
+ x.js:395:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+0&&(o=t[0]),o instanceof 
+Error)throw o;var u=new 
+Error("Unhandled 
+error."+(o?" ("+
+                           
+    ^
+
+Error: Connection 
+terminated unexpectedly
+    at hn.<anonymous> (C:\U
+sers\ishap\Downloads\VS cod
+e\Klasso\backend\node_modul
+es\@neondatabase\serverless
+\index.js:1250:44)
+    at Object.onceWrapper (
+C:\Users\ishap\Downloads\VS
+ code\Klasso\backend\node_m
+odules\@neondatabase\server
+less\index.js:410:15)
+    at hn.emit (C:\Users\is
+hap\Downloads\VS code\Klass
+o\backend\node_modules\@neo
+ndatabase\serverless\index.
+js:397:12)
+    at E.<anonymous> (C:\Us
+ers\ishap\Downloads\VS code
+\Klasso\backend\node_module
+s\@neondatabase\serverless\
+index.js:1202:66)
+    at E.emit (C:\Users\ish
+ap\Downloads\VS code\Klasso
+\backend\node_modules\@neon
+database\serverless\index.j
+s:397:12)
+    at 
+WebSocket.<anonymous> (C:\U
+sers\ishap\Downloads\VS cod
+e\Klasso\backend\node_modul
+es\@neondatabase\serverless
+\index.js:989:51)
+    at callListener (C:\Use
+rs\ishap\Downloads\VS code\
+Klasso\backend\node_modules
+\ws\lib\event-target.js:290
+:14)
+    at WebSocket.onClose (C
+:\Users\ishap\Downloads\VS 
+code\Klasso\backend\node_mo
+dules\ws\lib\event-target.j
+s:220:9)
+    at WebSocket.emit 
+(node:events:524:28)
+    at WebSocket.emitClose 
+(C:\Users\ishap\Downloads\V
+S code\Klasso\backend\node_
+modules\ws\lib\websocket.js
+:273:10)
+
+Node.js v20.19.6

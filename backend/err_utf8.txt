@@ -1,0 +1,74 @@
+﻿≡ƒî▒ Starting Klasso seed process...
+Starting seed operations...
+Γ£à Cleaned up old data.
+Generated password hash for Password123!
+Γ£à Created school: a0eeaca0-c6ef-4fd1-847a-7b35870aec36
+Γ£à Created academic year: b75ab6ce-4cbc-4bfb-bb68-a98eb3ddaac0
+Γ£à Created all users.
+Γ£à Created classes 8-A and 9-B.
+Γ£à Created subjects.
+Γ£à Assigned subjects to classes.
+Γ£à Created students.
+Γ£à Linked parent to student.
+Γ£à Generated 30 days of attendance.
+Γ£à Generated exams and marks.
+Γ£à Generated timetable.
+Γ£à Generated assignments.
+Γ£à Generated submissions.
+Γ£à Created ClassXP.
+Γ£à Created attendance streak.
+Γ£à Created badges and awarded to Arjun.
+Γ£à Generated notifications.
+Γ£à Generated fees and payment.
+Γ£à Generated messages.
+Γ£à Generated announcements.
+Γ£à Generated events.
+node : Γ¥î Error during 
+seeding: error: column 
+"school_id" of relation 
+"documents" does not exist
+At line:1 char:1
++ node src/db/seed.js > 
+err.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (Γ¥î  
+   Error durin... does n   
+ ot exist:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+    at C:\Users\ishap\Downl
+oads\VS code\Klasso\backend
+\node_modules\@neondatabase
+\serverless\index.js:1345:7
+4
+    at process.processTicks
+AndRejections (node:interna
+l/process/task_queues:95:5)
+    at async seedData (C:\U
+sers\ishap\Downloads\VS cod
+e\Klasso\backend\src\db\see
+d.js:470:24) {
+  length: 131,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '37',
+  internalPosition: 
+undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_target.c',
+  line: '1065',
+  routine: 
+'checkInsertTargets'
+}

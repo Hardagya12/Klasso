@@ -5,7 +5,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { KlassoCard } from './KlassoCard';
 import { apiData } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Colors, Fonts } from './theme';
+import { Colors, Fonts } from '../../constants/theme';
 
 // Generates a dynamic crest with a colored border and level number inside
 const LevelCrest = ({ level, color, size = 48 }: { level: number, color: string, size?: number }) => (
