@@ -7,26 +7,25 @@ const MODEL     = 'claude-sonnet-4-20250514';
 const VERSION   = '2023-06-01';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Internal: low-level POST to Anthropic messages API
+// Internal: low-level POST to Anthropic messages API (Rewritten for Gemini API)
 // ─────────────────────────────────────────────────────────────────────────────
 const callClaude = (systemPrompt, userPrompt, maxTokens = 1000) => {
   return new Promise((resolve, reject) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set'));
+
     const body = JSON.stringify({
-      model      : MODEL,
-      max_tokens : maxTokens,
-      system     : systemPrompt,
-      messages   : [{ role: 'user', content: userPrompt }],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
     });
 
     const options = {
-      hostname: 'api.anthropic.com',
-      path    : '/v1/messages',
-      method  : 'POST',
-      headers : {
-        'Content-Type'    : 'application/json',
-        'x-api-key'       : process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': VERSION,
-        'Content-Length'  : Buffer.byteLength(body),
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
       },
     };
 
@@ -36,11 +35,11 @@ const callClaude = (systemPrompt, userPrompt, maxTokens = 1000) => {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.error) return reject(new Error(parsed.error.message || 'Anthropic API error'));
-          const text = parsed.content?.[0]?.text || '';
+          if (parsed.error) return reject(new Error(parsed.error.message || 'Gemini API error'));
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
           resolve(text);
         } catch (e) {
-          reject(new Error('Failed to parse Anthropic response'));
+          reject(new Error('Failed to parse Gemini response'));
         }
       });
     });
@@ -52,43 +51,44 @@ const callClaude = (systemPrompt, userPrompt, maxTokens = 1000) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// callClaudeChat — multi-turn messages (Anthropic roles: user | assistant)
+// callClaudeChat — multi-turn messages (Anthropic roles: user | assistant, wrapped for Gemini)
 // ─────────────────────────────────────────────────────────────────────────────
 const callClaudeChat = (systemPrompt, claudeMessages, maxTokens = 1200) => {
   return new Promise((resolve, reject) => {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return reject(new Error('ANTHROPIC_API_KEY is not set'));
-    }
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set'));
+
+    const contents = claudeMessages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
     const body = JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: claudeMessages,
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: contents
     });
 
     const options = {
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': VERSION,
         'Content-Length': Buffer.byteLength(body),
       },
     };
 
     const req = https.request(options, (res) => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.error) return reject(new Error(parsed.error.message || 'Anthropic API error'));
-          const text = parsed.content?.[0]?.text || '';
+          if (parsed.error) return reject(new Error(parsed.error.message || 'Gemini API error'));
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
           resolve(text);
         } catch (e) {
-          reject(new Error('Failed to parse Anthropic response'));
+          reject(new Error('Failed to parse Gemini response'));
         }
       });
     });
@@ -144,7 +144,7 @@ const generateStudentReport = async (studentData) => {
     .map(m => `  - ${m.subject}: ${m.score}/${m.max_marks} (Grade: ${m.grade})`)
     .join('\n');
 
-  const systemPrompt = `You are an experienced school teacher writing professional end-of-term progress reports for parents. Write in warm, specific, professional English that is culturally appropriate for Indian parents. Always use real numbers from the data provided. Keep the report concise but meaningful — exactly 3 paragraphs.`;
+  const systemPrompt = `You are an experienced school teacher writing professional end-of-term progress reports for parents. Write in warm, specific, professional English that is culturally appropriate for Indian parents. Always use real numbers from the data provided. Keep the report concise but meaningful. ABSOLUTELY NO MARKDOWN. Do not use asterisks, bolding, italics, or hash tags.`;
 
   const userPrompt = `Write a progress report for the following student:
 
@@ -157,11 +157,14 @@ Subject-wise Marks:
 ${marksText}
 
 Structure:
-Paragraph 1 (Academic Highlights): Mention specific subjects, actual scores, and academic strengths.
-Paragraph 2 (Attendance & Dedication): Comment on the specific attendance percentage, punctuality, and discipline.
-Paragraph 3 (Growth Areas & Closing): Identify areas needing improvement, then close with an encouraging and motivating message for the student and family.
+Paragraph 1: Academic Highlights. Mention specific subjects, actual scores, and academic strengths smoothly in the text.
+Paragraph 2: Attendance & Dedication. Comment on the specific attendance percentage, punctuality, and discipline smoothly.
+Paragraph 3: Growth Areas & Closing. Identify areas needing improvement, then close with an encouraging message.
 
-Write only the 3 paragraphs, no headings, no bullet points.`;
+Rules:
+1. Write EXACTLY THREE separate paragraphs.
+2. DO NOT include any labels like "Paragraph 1:", "Academic Highlights:", "Strengths:", etc.
+3. DO NOT use any Markdown formatting at all (no '**', no '*', no '##'). Output pure plain text ONLY.`;
 
   return callClaude(systemPrompt, userPrompt, 1000);
 };
