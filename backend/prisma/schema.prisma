@@ -30,6 +30,7 @@ model School {
   feeTypes       FeeType[]
   events         Event[]
   students       Student[]
+  ptmEvents      PTMEvent[]
 
   @@map("schools")
 }
@@ -76,6 +77,9 @@ model User {
   questsCreated              Quest[]              @relation("QuestTeacher")
   duelsCreated               Duel[]               @relation("DuelTeacher")
   moodAlerts                 MoodAlert[]          @relation("MoodAlertTeacher")
+  ptmEventsCreated           PTMEvent[]           @relation("PTMCreator")
+  ptmSlotsAsTeacher          PTMSlot[]            @relation("PTMTeacher")
+  ptmSlotsAsParent           PTMSlot[]            @relation("PTMParent")
 
   @@index([schoolId], map: "idx_users_school")
   @@index([role], map: "idx_users_role")
@@ -159,6 +163,7 @@ model Student {
   moodCheckIns       MoodCheckIn[]
   moodAlerts         MoodAlert[]
   timeCapsules       TimeCapsule[]
+  ptmSlots           PTMSlot[]          @relation("PTMStudent")
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -374,9 +379,24 @@ model Substitution {
   originalTeacher     User?          @relation("SubstitutionOriginalTeacher", fields: [originalTeacherId], references: [id])
   substituteTeacher   User?          @relation("SubstitutionSubstituteTeacher", fields: [substituteTeacherId], references: [id])
   createdByUser       User?          @relation("SubstitutionCreatedBy", fields: [createdBy], references: [id])
+  briefing            SubBriefing?
 
   @@unique([timetableSlotId, date])
   @@map("substitutions")
+}
+
+model SubBriefing {
+  id             String    @id @default(cuid())
+  substitutionId String    @unique @map("substitution_id") @db.Uuid
+  content        Json      // structured briefing data (classInfo, topStudents, etc.)
+  aiSummary      String    @map("ai_summary")
+  isViewed       Boolean   @default(false) @map("is_viewed")
+  viewedAt       DateTime? @map("viewed_at") @db.Timestamptz(6)
+  generatedAt    DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
+
+  substitution   Substitution @relation(fields: [substitutionId], references: [id], onDelete: Cascade)
+
+  @@map("sub_briefings")
 }
 
 model Assignment {
@@ -879,4 +899,67 @@ model DuelAnswer {
 
   @@unique([sessionId, questionId])
   @@map("duel_answers")
+}
+
+// ── PTM Scheduler ────────────────────────────────────────────────────────────────
+
+enum PTMStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum SlotStatus {
+  CONFIRMED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+model PTMEvent {
+  id           String      @id @default(cuid())
+  schoolId     String      @map("school_id") @db.Uuid
+  title        String      @db.VarChar(255)
+  date         DateTime    @db.Date
+  startTime    String      @map("start_time") @db.VarChar(10)
+  endTime      String      @map("end_time") @db.VarChar(10)
+  slotDuration Int         @default(10) @map("slot_duration")
+  createdById  String      @map("created_by_id") @db.Uuid
+  status       PTMStatus   @default(UPCOMING)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school       School      @relation(fields:[schoolId], references:[id], onDelete: Cascade)
+  slots        PTMSlot[]
+  creator      User        @relation("PTMCreator", fields:[createdById], references:[id])
+
+  @@index([schoolId], map: "idx_ptm_events_school")
+  @@map("ptm_events")
+}
+
+model PTMSlot {
+  id           String      @id @default(cuid())
+  ptmEventId   String      @map("ptm_event_id")
+  teacherId    String      @map("teacher_id") @db.Uuid
+  parentId     String      @map("parent_id") @db.Uuid
+  studentId    String      @map("student_id") @db.Uuid
+  scheduledAt  DateTime    @map("scheduled_at") @db.Timestamptz(6)
+  duration     Int         @default(10)
+  status       SlotStatus  @default(CONFIRMED)
+  talkingPoints Json?      @map("talking_points")
+  notes        String?
+  summary      String?
+  summarysentAt DateTime?  @map("summary_sent_at") @db.Timestamptz(6)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  ptmEvent     PTMEvent    @relation(fields:[ptmEventId], references:[id], onDelete: Cascade)
+  teacher      User        @relation("PTMTeacher", fields:[teacherId], references:[id], onDelete: Cascade)
+  parent       User        @relation("PTMParent", fields:[parentId], references:[id], onDelete: Cascade)
+  student      Student     @relation("PTMStudent", fields:[studentId], references:[id], onDelete: Cascade)
+
+  @@index([ptmEventId], map: "idx_ptm_slots_event")
+  @@index([teacherId], map: "idx_ptm_slots_teacher")
+  @@index([parentId], map: "idx_ptm_slots_parent")
+  @@index([studentId], map: "idx_ptm_slots_student")
+  @@map("ptm_slots")
 }
