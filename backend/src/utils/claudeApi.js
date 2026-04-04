@@ -227,9 +227,138 @@ Provide feedback in this exact format:
   return callClaude(systemPrompt, userPrompt, 600);
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateMoodAlertMessage
+// ─────────────────────────────────────────────────────────────────────────────
+const generateMoodAlertMessage = async (pattern, days) => {
+  const systemPrompt = `You are an empathetic school counselor AI.
+Write a single gentle, non-alarmist 2-sentence private note to a teacher.
+Do not mention the student by name. Focus on observation, not diagnosis.
+Tone: caring colleague to colleague.`;
+
+  const userPrompt = `A student has shown ${pattern} in their mood check-ins over ${days} days.
+Please provide the 2-sentence note.`;
+
+  return callClaude(systemPrompt, userPrompt, 200);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateTimeCapsuleNarrative
+// ─────────────────────────────────────────────────────────────────────────────
+const generateTimeCapsuleNarrative = async (aggregatedData) => {
+  const systemPrompt = `You are a warm, celebratory school AI generating an end-of-year summary for a student.
+Be specific, warm, and celebratory. Use the actual numbers.
+Output MUST be valid JSON, containing exactly these keys:
+{
+  "headline": "5-7 word punchy headline about their year (e.g., 'The Year Mihir Found His Rhythm')",
+  "highlight": "2 sentence biggest achievement of the year based on the data",
+  "growthStory": "2 sentence story about their most notable improvement",
+  "funFact": "1 fun/quirky stat fact (e.g., 'You spent 4.2 hours chatting with AI Study Buddy')",
+  "teacherNote": "1 warm sentence a teacher would say about them",
+  "emoji": "single most fitting emoji for their year"
+}`;
+
+  const userPrompt = `Student Data:\n${JSON.stringify(aggregatedData)}\nGenerate the JSON.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, 500);
+    // Parse json
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error("AI Time Capsule Gen Error - returning defaults", error);
+    return {
+      headline: "An Incredible Year of Growth!",
+      highlight: "You've worked super hard and consistently pushed yourself to learn more.",
+      growthStory: "You turned challenges into stepping stones and never gave up.",
+      funFact: "You logged into Klasso more times than we could count!",
+      teacherNote: "I am incredibly proud of everything you accomplished.",
+      emoji: "🌟"
+    };
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateSubBriefingSummary
+// ─────────────────────────────────────────────────────────────────────────────
+const generateSubBriefingSummary = async (classData) => {
+  const systemPrompt = `You are generating a substitute teacher briefing for a teacher covering a class they don't know.
+Write a friendly, practical 3-paragraph briefing (under 120 words total).
+Paragraph 1: Quick class overview and vibe (1-2 sentences, warm tone).
+Paragraph 2: Key things to know — who's engaged, who might need attention (no diagnoses, just observations).
+Paragraph 3: What the class has been working on and any notes for today.
+Tone: one colleague briefing another. Do NOT invent data — use only what is provided.`;
+
+  const userPrompt = `Class data:\n${JSON.stringify(classData)}\n\nWrite the 3-paragraph briefing now.`;
+
+  try {
+    return await callClaude(systemPrompt, userPrompt, 400);
+  } catch (err) {
+    console.error('SubBriefing AI error:', err.message);
+    const { classInfo } = classData;
+    return `${classInfo.name} ${classInfo.section} is a class of ${classInfo.studentCount} students studying ${classInfo.subject}. Class attendance is around ${classData.avgAttendance}%. They are currently working on ${classData.subjectProgress?.recentTopic || 'recent curriculum topics'}. Good luck today — you've got this!`;
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+// generatePTMTalkingPoints
+// ─────────────────────────────────────────────────────────────────────────────
+const generatePTMTalkingPoints = async (studentData) => {
+  const systemPrompt = `You are an AI assistant helping a teacher prepare for a 10-minute Parent-Teacher Meeting.
+Review the student data provided and generate 4-6 specific talking points (bullet points).
+Include a mix of achievements and constructive areas for improvement.
+Ensure output is pure JSON matching this exact shape: 
+[
+  { "type": "positive" | "concern" | "neutral", "point": "The actual talking point text (1-2 sentences)" }
+]`;
+
+  const userPrompt = `Student Data:\n${JSON.stringify(studentData)}\n\nGenerate the JSON array of talking points.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, 600);
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('PTM Talking Points AI error:', err.message);
+    return [
+      { type: 'neutral', point: 'Discuss overall academic progress this term.' },
+      { type: 'neutral', point: 'Review attendance and participation.' }
+    ];
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generatePTMPostSummary
+// ─────────────────────────────────────────────────────────────────────────────
+const generatePTMPostSummary = async (studentName, notes) => {
+  const systemPrompt = `You are a warm, professional teacher writing a quick post-meeting summary to send to parents after a parent-teacher meeting.
+Write exactly 3 friendly sentences summarizing the meeting notes provided. Do not use generic placeholders.`;
+
+  const userPrompt = `Student: ${studentName}\nTeacher's Raw Meeting Notes:\n${notes}\n\nGenerate the 3-sentence summary message.`;
+
+  try {
+    return await callClaude(systemPrompt, userPrompt, 300);
+  } catch (err) {
+    console.error('PTM Summary AI error:', err.message);
+    return `It was wonderful speaking with you about ${studentName}'s progress today! We discussed strategies to support their continued growth. Please reach out if you have any more questions.`;
+  }
+};
+
 module.exports = {
   generateStudentReport,
   generateLessonPlan,
   generateAIFeedback,
   chatStudentBuddy,
+  generateMoodAlertMessage,
+  generateTimeCapsuleNarrative,
+  generateSubBriefingSummary,
+  generatePTMTalkingPoints,
+  generatePTMPostSummary,
 };

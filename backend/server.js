@@ -6,9 +6,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const http = require('http');
 
 const { testConnection } = require('./src/db/neon');
 const errorHandler = require('./src/middleware/errorHandler');
+const { setupSocketIO } = require('./src/socket');
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/auth');
@@ -24,6 +26,7 @@ const timetableRoutes = require('./src/routes/timetable');
 const announcementRoutes = require('./src/routes/announcements');
 const messageRoutes = require('./src/routes/messages');
 const notificationRoutes = require('./src/routes/notifications');
+const xpRoutes = require('./src/routes/classXp');
 const feeRoutes = require('./src/routes/fees');
 const reportRoutes = require('./src/routes/reports');
 const lessonPlanRoutes = require('./src/routes/lessonPlans');
@@ -32,6 +35,9 @@ const studyMaterialRoutes = require('./src/routes/studyMaterials');
 const documentRoutes = require('./src/routes/documents');
 const eventRoutes = require('./src/routes/events');
 const aiRoutes = require('./src/routes/ai');
+const questRoutes = require('./src/routes/quests');
+const subBriefingRoutes = require('./src/routes/subBriefings');
+const ptmRoutes = require('./src/routes/ptm');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,10 +61,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
+const server = http.createServer(app);
+setupSocketIO(server, corsOrigins);
+
 // ── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
 });
+
+const streakRoutes = require('./src/routes/streak');
+const moodRoutes = require('./src/routes/mood');
+const timeCapsuleRoutes = require('./src/routes/timecapsule');
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -82,6 +95,14 @@ app.use('/api/study-materials', studyMaterialRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/streak', streakRoutes);
+app.use('/api/xp', xpRoutes);
+app.use('/api/quests', questRoutes);
+app.use('/api/duels', duelRoutes);
+app.use('/api/mood', moodRoutes);
+app.use('/api/timecapsule', timeCapsuleRoutes);
+app.use('/api/substitution', subBriefingRoutes);
+app.use('/api/ptm', ptmRoutes);
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -94,9 +115,10 @@ app.use(errorHandler);
 // ── Start ──────────────────────────────────────────────────────────────────────
 const start = async () => {
   await testConnection();
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀  Klasso API running on http://localhost:${PORT}`);
     console.log(`📦  Environment: ${process.env.NODE_ENV}`);
+    console.log(`⚡  Socket.IO real-time enabled`);
   });
 };
 

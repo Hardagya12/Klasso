@@ -15,6 +15,7 @@ const {
   updateAttendanceRecord,
   getLiveAttendance,
 } = require('../controllers/attendanceController');
+const { processVoiceAttendance } = require('../controllers/voiceAttendanceController');
 
 // ── Public route (no auth) ────────────────────────────────────────────────────
 // POST /api/attendance/qr/scan  — student scans QR code (no login needed)
@@ -55,6 +56,14 @@ router.post(
   voiceAttendance
 );
 
+// POST /api/attendance/voice-ai  — AI-powered voice command processing
+router.post(
+  '/voice-ai',
+  authorizeRole('teacher', 'admin'),
+  validateBody(['class_id', 'command']),
+  processVoiceAttendance
+);
+
 // GET /api/attendance  — ?class_id=&date=
 router.get('/', validateQuery(['class_id']), getAttendanceByClass);
 
@@ -76,3 +85,4 @@ router.put(
 );
 
 module.exports = router;
+

@@ -30,6 +30,7 @@ model School {
   feeTypes       FeeType[]
   events         Event[]
   students       Student[]
+  ptmEvents      PTMEvent[]
 
   @@map("schools")
 }
@@ -73,6 +74,12 @@ model User {
   lessonPlansCreated         LessonPlan[]         @relation("LessonPlanCreatedBy")
   eventsCreated              Event[]              @relation("EventCreatedBy")
   documentsGenerated         Document[]           @relation("DocumentGeneratedBy")
+  questsCreated              Quest[]              @relation("QuestTeacher")
+  duelsCreated               Duel[]               @relation("DuelTeacher")
+  moodAlerts                 MoodAlert[]          @relation("MoodAlertTeacher")
+  ptmEventsCreated           PTMEvent[]           @relation("PTMCreator")
+  ptmSlotsAsTeacher          PTMSlot[]            @relation("PTMTeacher")
+  ptmSlotsAsParent           PTMSlot[]            @relation("PTMParent")
 
   @@index([schoolId], map: "idx_users_school")
   @@index([role], map: "idx_users_role")
@@ -117,6 +124,9 @@ model Class {
   exams               Exam[]
   timetableSlots      TimetableSlot[]
   announcements       Announcement[]
+  classXP             ClassXP?
+  quests              Quest[]
+  duels               Duel[]
 
   @@unique([schoolId, academicYearId, name, section])
   @@map("classes")
@@ -145,6 +155,15 @@ model Student {
   assignmentSubmissions AssignmentSubmission[]
   feePayments        FeePayment[]
   documents          Document[]
+  streak             AttendanceStreak?
+  studentBadges      StudentBadge[]
+  quests             Quest[]            @relation("QuestStudent")
+  questCompletions   QuestCompletion[]
+  duelSessions       DuelSession[]
+  moodCheckIns       MoodCheckIn[]
+  moodAlerts         MoodAlert[]
+  timeCapsules       TimeCapsule[]
+  ptmSlots           PTMSlot[]          @relation("PTMStudent")
 
   @@unique([classId, rollNo])
   @@index([classId], map: "idx_students_class")
@@ -360,9 +379,24 @@ model Substitution {
   originalTeacher     User?          @relation("SubstitutionOriginalTeacher", fields: [originalTeacherId], references: [id])
   substituteTeacher   User?          @relation("SubstitutionSubstituteTeacher", fields: [substituteTeacherId], references: [id])
   createdByUser       User?          @relation("SubstitutionCreatedBy", fields: [createdBy], references: [id])
+  briefing            SubBriefing?
 
   @@unique([timetableSlotId, date])
   @@map("substitutions")
+}
+
+model SubBriefing {
+  id             String    @id @default(cuid())
+  substitutionId String    @unique @map("substitution_id") @db.Uuid
+  content        Json      // structured briefing data (classInfo, topStudents, etc.)
+  aiSummary      String    @map("ai_summary")
+  isViewed       Boolean   @default(false) @map("is_viewed")
+  viewedAt       DateTime? @map("viewed_at") @db.Timestamptz(6)
+  generatedAt    DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
+
+  substitution   Substitution @relation(fields: [substitutionId], references: [id], onDelete: Cascade)
+
+  @@map("sub_briefings")
 }
 
 model Assignment {
@@ -562,4 +596,370 @@ model Document {
   generator User?   @relation("DocumentGeneratedBy", fields: [generatedBy], references: [id])
 
   @@map("documents")
+}
+
+// ── Gamification: Attendance Streaks & Badges ─────────────────────────────────
+
+enum BadgeType {
+  STREAK
+  PERFORMANCE
+  SUBMISSION
+  SPECIAL
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model AttendanceStreak {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String    @unique @map("student_id") @db.Uuid
+  currentStreak   Int       @default(0) @map("current_streak")
+  longestStreak   Int       @default(0) @map("longest_streak")
+  lastPresentDate DateTime? @map("last_present_date") @db.Date
+  totalPresentDays Int      @default(0) @map("total_present_days")
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_streaks")
+}
+
+model Badge {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(80)
+  description String
+  type        BadgeType @default(STREAK)
+  threshold   Int       @default(0)
+  iconName    String    @map("icon_name") @db.VarChar(60)
+  color       String    @db.VarChar(10)
+  rarity      Rarity    @default(COMMON)
+
+  studentBadges StudentBadge[]
+
+  @@map("badges")
+}
+
+model StudentBadge {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  badgeId   String   @map("badge_id") @db.Uuid
+  earnedAt  DateTime @default(now()) @map("earned_at") @db.Timestamptz(6)
+  isNew     Boolean  @default(true) @map("is_new")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge   Badge   @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeId])
+  @@index([studentId], map: "idx_student_badges_student")
+  @@map("student_badges")
+}
+
+// ──────────────────────────────────────────────────────────
+// Class XP (Collective Gamification)
+// ──────────────────────────────────────────────────────────
+
+model ClassXP {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId       String    @unique @map("class_id") @db.Uuid
+  totalXP       Int       @default(0) @map("total_xp")
+  currentLevel  Int       @default(1) @map("current_level")
+  currentTitle  String    @default("Seedlings") @map("current_title") @db.VarChar(50)
+  xpToNextLevel Int       @default(500) @map("xp_to_next_level")
+  weeklyXP      Int       @default(0) @map("weekly_xp")
+  weekStartDate DateTime  @map("week_start_date") @db.Date
+  
+  class         Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  events        XPEvent[]
+
+  @@map("class_xp")
+}
+
+model XPEvent {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classXpId   String      @map("class_xp_id") @db.Uuid
+  type        XPEventType
+  xpEarned    Int         @map("xp_earned")
+  description String
+  triggeredBy String?     @map("triggered_by") @db.Uuid // Can be user ID
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  classXP     ClassXP     @relation(fields: [classXpId], references: [id], onDelete: Cascade)
+
+  @@index([classXpId], map: "idx_xp_events_class_xp")
+  @@map("xp_events")
+}
+
+enum XPEventType {
+  FULL_ATTENDANCE_DAY
+  HIGH_ATTENDANCE_DAY
+  ALL_HOMEWORK_SUBMITTED
+  HIGH_SUBMISSION_RATE
+  CLASS_TEST_AVG_ABOVE_80
+  CLASS_TEST_AVG_ABOVE_70
+  ZERO_LATE_SUBMISSIONS
+  LEVEL_UP_BONUS
+  TEACHER_BONUS
+  STREAK_MILESTONE
+}
+
+// ── Study Quests ────────────────────────────────────────────────────────────
+
+enum QuestType {
+  ATTENDANCE_STREAK
+  AI_BUDDY_SESSIONS
+  ASSIGNMENT_SUBMISSIONS
+  GRADE_TARGET
+  ZERO_ABSENCES_WEEK
+  CUSTOM
+}
+
+model Quest {
+  id          String    @id @default(cuid())
+  teacherId   String    @map("teacher_id") @db.Uuid
+  classId     String    @map("class_id") @db.Uuid
+  studentId   String?   @map("student_id") @db.Uuid
+  title       String    @db.VarChar(255)
+  description String
+  type        QuestType
+  target      Json
+  xpReward    Int       @default(50) @map("xp_reward")
+  badgeName   String?   @map("badge_name") @db.VarChar(100)
+  badgeColor  String?   @map("badge_color") @db.VarChar(20)
+  startDate   DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate     DateTime  @map("end_date") @db.Timestamptz(6)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  teacher     User      @relation("QuestTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  class       Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student     Student?  @relation("QuestStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  completions QuestCompletion[]
+
+  @@index([classId], map: "idx_quests_class")
+  @@index([teacherId], map: "idx_quests_teacher")
+  @@map("quests")
+}
+
+model QuestCompletion {
+  id          String   @id @default(cuid())
+  questId     String   @map("quest_id")
+  studentId   String   @map("student_id") @db.Uuid
+  completedAt DateTime @default(now()) @map("completed_at") @db.Timestamptz(6)
+  xpAwarded   Int      @map("xp_awarded")
+
+  quest   Quest   @relation(fields: [questId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([questId, studentId])
+  @@index([studentId], map: "idx_quest_completions_student")
+  @@map("quest_completions")
+}
+
+// ── Knowledge Duel (Real-time Quiz) ──────────────────────────────────────────
+
+enum DuelStatus {
+  WAITING
+  ACTIVE
+  QUESTION_ACTIVE
+  SHOWING_RESULTS
+  ENDED
+}
+
+model Duel {
+  id          String     @id @default(cuid())
+  classId     String     @map("class_id") @db.Uuid
+  subjectId   String?    @map("subject_id") @db.Uuid
+  teacherId   String     @map("teacher_id") @db.Uuid
+  title       String     @db.VarChar(255)
+  status      DuelStatus @default(WAITING)
+  currentQ    Int        @default(0) @map("current_q")
+  startedAt   DateTime?  @map("started_at") @db.Timestamptz(6)
+  endedAt     DateTime?  @map("ended_at") @db.Timestamptz(6)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  class       Class         @relation(fields:[classId], references:[id], onDelete: Cascade)
+  teacher     User          @relation("DuelTeacher", fields:[teacherId], references:[id], onDelete: Cascade)
+  questions   DuelQuestion[]
+  sessions    DuelSession[]
+
+  @@index([classId], map: "idx_duels_class")
+  @@index([teacherId], map: "idx_duels_teacher")
+  @@map("duels")
+}
+
+model DuelQuestion {
+  id            String   @id @default(cuid())
+  duelId        String   @map("duel_id")
+  order         Int
+  questionText  String   @map("question_text")
+  options       Json
+  correctIndex  Int      @map("correct_index")
+  timeLimit     Int      @default(30) @map("time_limit")
+  points        Int      @default(10)
+  
+  duel          Duel         @relation(fields:[duelId], references:[id], onDelete: Cascade)
+  answers       DuelAnswer[]
+
+  @@map("duel_questions")
+}
+
+model DuelSession {
+  id        String   @id @default(cuid())
+  duelId    String   @map("duel_id")
+  studentId String   @map("student_id") @db.Uuid
+  totalScore Int     @default(0) @map("total_score")
+  rank      Int?
+
+  duel      Duel           @relation(fields:[duelId], references:[id], onDelete: Cascade)
+  student   Student        @relation(fields:[studentId], references:[id], onDelete: Cascade)
+  answers   DuelAnswer[]
+
+  @@unique([duelId, studentId])
+  @@map("duel_sessions")
+}
+
+// ── Mood Wellbeing Engine ────────────────────────────────────────────────────────
+
+enum MoodLevel {
+  GREAT
+  GOOD
+  OKAY
+  SAD
+  STRESSED
+}
+
+enum MoodAlertType {
+  CONSECUTIVE_LOW
+  SUDDEN_DROP
+  WEEKLY_PATTERN
+}
+
+model MoodCheckIn {
+  id        String    @id @default(cuid())
+  studentId String    @map("student_id") @db.Uuid
+  mood      MoodLevel
+  note      String?
+  date      DateTime  @db.Date
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@map("mood_checkins")
+}
+
+model MoodAlert {
+  id          String        @id @default(cuid())
+  studentId   String        @map("student_id") @db.Uuid
+  teacherId   String        @map("teacher_id") @db.Uuid
+  alertType   MoodAlertType @map("alert_type")
+  message     String
+  isRead      Boolean       @default(false) @map("is_read")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher     User          @relation("MoodAlertTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("mood_alerts")
+}
+
+// ── Time Capsule ─────────────────────────────────────────────────────────────────
+
+model TimeCapsule {
+  id               String   @id @default(cuid())
+  studentId        String   @map("student_id") @db.Uuid
+  academicYear     String   @map("academic_year")
+  data             Json     // all the computed stats
+  aiNarrative      Json     @map("ai_narrative") // { highlight, funFact, teacherNote, growthStory, emoji, headline }
+  shareableCardUrl String?  @map("shareable_card_url") // generated image URL
+  isPublished      Boolean  @default(false) @map("is_published")
+  generatedAt      DateTime @default(now()) @map("generated_at") @db.Timestamptz(6)
+
+  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, academicYear])
+  @@map("time_capsules")
+}
+
+model DuelAnswer {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  questionId  String   @map("question_id")
+  answerIndex Int      @map("answer_index")
+  isCorrect   Boolean  @map("is_correct")
+  timeToAnswer Float   @map("time_to_answer")
+  pointsEarned Int     @default(0) @map("points_earned")
+
+  session     DuelSession  @relation(fields:[sessionId], references:[id], onDelete: Cascade)
+  question    DuelQuestion @relation(fields:[questionId], references:[id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@map("duel_answers")
+}
+
+// ── PTM Scheduler ────────────────────────────────────────────────────────────────
+
+enum PTMStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum SlotStatus {
+  CONFIRMED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+model PTMEvent {
+  id           String      @id @default(cuid())
+  schoolId     String      @map("school_id") @db.Uuid
+  title        String      @db.VarChar(255)
+  date         DateTime    @db.Date
+  startTime    String      @map("start_time") @db.VarChar(10)
+  endTime      String      @map("end_time") @db.VarChar(10)
+  slotDuration Int         @default(10) @map("slot_duration")
+  createdById  String      @map("created_by_id") @db.Uuid
+  status       PTMStatus   @default(UPCOMING)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school       School      @relation(fields:[schoolId], references:[id], onDelete: Cascade)
+  slots        PTMSlot[]
+  creator      User        @relation("PTMCreator", fields:[createdById], references:[id])
+
+  @@index([schoolId], map: "idx_ptm_events_school")
+  @@map("ptm_events")
+}
+
+model PTMSlot {
+  id           String      @id @default(cuid())
+  ptmEventId   String      @map("ptm_event_id")
+  teacherId    String      @map("teacher_id") @db.Uuid
+  parentId     String      @map("parent_id") @db.Uuid
+  studentId    String      @map("student_id") @db.Uuid
+  scheduledAt  DateTime    @map("scheduled_at") @db.Timestamptz(6)
+  duration     Int         @default(10)
+  status       SlotStatus  @default(CONFIRMED)
+  talkingPoints Json?      @map("talking_points")
+  notes        String?
+  summary      String?
+  summarysentAt DateTime?  @map("summary_sent_at") @db.Timestamptz(6)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  ptmEvent     PTMEvent    @relation(fields:[ptmEventId], references:[id], onDelete: Cascade)
+  teacher      User        @relation("PTMTeacher", fields:[teacherId], references:[id], onDelete: Cascade)
+  parent       User        @relation("PTMParent", fields:[parentId], references:[id], onDelete: Cascade)
+  student      Student     @relation("PTMStudent", fields:[studentId], references:[id], onDelete: Cascade)
+
+  @@index([ptmEventId], map: "idx_ptm_slots_event")
+  @@index([teacherId], map: "idx_ptm_slots_teacher")
+  @@index([parentId], map: "idx_ptm_slots_parent")
+  @@index([studentId], map: "idx_ptm_slots_student")
+  @@map("ptm_slots")
 }

@@ -7,6 +7,7 @@ const {
   computeClassRanks, isPassing,
 } = require('../utils/gradeCalculator');
 const { createNotification, createNotificationsForMany } = require('../utils/notificationHelper');
+const questService = require('../utils/questService');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/marks/bulk
@@ -57,6 +58,7 @@ const bulkInsertMarks = async (req, res, next) => {
     await client.query('COMMIT');
 
     // Notify students + parents (fire-and-forget)
+    const studentIdsList = marks.map(m => m.student_id).filter(Boolean);
     if (notifyUserIds.size) {
       const uids = [...notifyUserIds];
       // also fetch parent ids
@@ -74,6 +76,13 @@ const bulkInsertMarks = async (req, res, next) => {
         'Your marks have been entered for a recent exam. Log in to view your result.',
         'success', 'marks', exam_id
       ).catch(e => console.error('[marks notification]', e.message));
+    }
+
+    // Check quest completions for each student (grade trigger)
+    for (const student_id of studentIdsList) {
+      questService.checkQuestCompletions(student_id, 'grade').catch(e =>
+        console.error('[questService] grade trigger error:', e.message)
+      );
     }
 
     return sendSuccess(res, { inserted, updated }, 'Marks saved successfully');

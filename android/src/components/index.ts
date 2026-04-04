@@ -40,3 +40,4 @@ export {
 
 // Theme tokens
 export { Colors, Fonts, Radius, retroShadow } from '../theme/colors';
+export * from './DuelWidget';

@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS reports (
 -- timetable_slots
 CREATE TABLE IF NOT EXISTS timetable_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
   class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
   class_subject_id UUID REFERENCES class_subjects(id) ON DELETE CASCADE,
   day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 6),
@@ -206,6 +207,17 @@ CREATE TABLE IF NOT EXISTS substitutions (
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(timetable_slot_id, date)
+);
+
+-- sub_briefings (AI-generated briefing for a substitute teacher)
+CREATE TABLE IF NOT EXISTS sub_briefings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  substitution_id UUID NOT NULL UNIQUE REFERENCES substitutions(id) ON DELETE CASCADE,
+  content JSONB NOT NULL,          -- structured class data (classInfo, topStudents, etc.)
+  ai_summary TEXT NOT NULL,        -- Claude-generated 3-paragraph narrative
+  is_viewed BOOLEAN DEFAULT FALSE,
+  viewed_at TIMESTAMPTZ,
+  generated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS assignments (
@@ -364,3 +376,52 @@ CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, is_r
 CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_slots(class_id);
 CREATE INDEX IF NOT EXISTS idx_fee_payments_student ON fee_payments(student_id);
 CREATE INDEX IF NOT EXISTS idx_study_materials_class_subject ON study_materials(class_subject_id);
+
+-- ── PTM Scheduler ────────────────────────────────────────────────────────────────
+
+DO $$ BEGIN
+    CREATE TYPE ptm_status_enum AS ENUM ('UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE slot_status_enum AS ENUM ('CONFIRMED', 'COMPLETED', 'MISSED', 'CANCELLED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS ptm_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    date DATE NOT NULL,
+    start_time VARCHAR(10) NOT NULL,
+    end_time VARCHAR(10) NOT NULL,
+    slot_duration INT NOT NULL DEFAULT 10,
+    created_by_id UUID NOT NULL REFERENCES users(id),
+    status ptm_status_enum NOT NULL DEFAULT 'UPCOMING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ptm_slots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ptm_event_id UUID NOT NULL REFERENCES ptm_events(id) ON DELETE CASCADE,
+    teacher_id UUID NOT NULL REFERENCES users(id),
+    parent_id UUID NOT NULL REFERENCES users(id),
+    student_id UUID NOT NULL REFERENCES students(id),
+    scheduled_at TIMESTAMPTZ NOT NULL,
+    duration INT NOT NULL DEFAULT 10,
+    status slot_status_enum NOT NULL DEFAULT 'CONFIRMED',
+    talking_points JSONB,
+    notes TEXT,
+    summary TEXT,
+    summary_sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ptm_events_school ON ptm_events(school_id);
+CREATE INDEX IF NOT EXISTS idx_ptm_slots_event ON ptm_slots(ptm_event_id);
+CREATE INDEX IF NOT EXISTS idx_ptm_slots_teacher ON ptm_slots(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_ptm_slots_parent ON ptm_slots(parent_id);
+CREATE INDEX IF NOT EXISTS idx_ptm_slots_student ON ptm_slots(student_id);
