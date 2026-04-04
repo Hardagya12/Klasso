@@ -11,6 +11,8 @@ import {
   DoodleStarburst, DoodleRuler, DoodleArrow, DoodleWave,
   Colors, Fonts, retroShadow, Radius,
 } from '@/src/components';
+import { useLocalSearchParams } from 'expo-router';
+import { apiData } from '@/lib/api';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -44,40 +46,7 @@ const PulsingDoodle = ({ children }: { children: React.ReactNode }) => {
 };
 
 // ─── Data ────────────────────────────────────────────────────────────────────
-const TERMS = [
-  {
-    id: '1', label: 'Term 1', status: 'PAID', amount: '₹20,000',
-    pills: ['Tuition', 'Transport', 'Activity'],
-    items: [
-      { name: 'Tuition Fee', amount: '₹15,000' },
-      { name: 'Transport', amount: '₹3,000' },
-      { name: 'Activity Fee', amount: '₹2,000' },
-    ],
-  },
-  {
-    id: '2', label: 'Term 2', status: 'PAID', amount: '₹22,000',
-    pills: ['Tuition', 'Lab', 'Sports'],
-    items: [
-      { name: 'Tuition Fee', amount: '₹17,000' },
-      { name: 'Lab Fee', amount: '₹3,000' },
-      { name: 'Sports Fee', amount: '₹2,000' },
-    ],
-  },
-  {
-    id: '3', label: 'Term 3', status: 'DUE', amount: '₹18,000',
-    pills: ['Tuition', 'Transport', 'Exam'],
-    items: [
-      { name: 'Tuition Fee', amount: '₹13,000' },
-      { name: 'Transport', amount: '₹3,000' },
-      { name: 'Exam Fee', amount: '₹2,000' },
-    ],
-  },
-];
-
-const HISTORY = [
-  { id: '1', day: '10', month: 'Jan', label: 'Term 1 Fee Payment', receipt: 'RCP-2024-001', amount: '₹20,000' },
-  { id: '2', day: '08', month: 'Mar', label: 'Term 2 Fee Payment', receipt: 'RCP-2024-002', amount: '₹22,000' },
-];
+// Removed static TERMS and HISTORY
 
 // ─── Progress Bar with Wavy End ───────────────────────────────────────────────
 const FeeProgressBar = ({ pct }: { pct: number }) => (
@@ -92,7 +61,7 @@ const FeeProgressBar = ({ pct }: { pct: number }) => (
 );
 
 // ─── Term Row Card ────────────────────────────────────────────────────────────
-const TermCard = ({ term }: { term: typeof TERMS[0] }) => {
+const TermCard = ({ term }: { term: any }) => {
   const [expanded, setExpanded] = useState(false);
   const isPaid = term.status === 'PAID';
   const isDue = term.status === 'DUE';
@@ -119,7 +88,7 @@ const TermCard = ({ term }: { term: typeof TERMS[0] }) => {
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.termLabel}>{term.label}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginTop: 4 }}>
-            {term.pills.map(p => (
+            {term.pills?.map((p: string) => (
               <View key={p} style={styles.termPill}>
                 <Text style={styles.termPillText}>{p}</Text>
               </View>
@@ -143,7 +112,7 @@ const TermCard = ({ term }: { term: typeof TERMS[0] }) => {
       {/* Expanded breakdown */}
       {expanded && (
         <View style={styles.termExpanded}>
-          {term.items.map((item, i) => (
+          {term.items?.map((item: any, i: number) => (
             <View key={i} style={styles.termItem}>
               <Text style={styles.termItemName}>{item.name}</Text>
               <Text style={styles.termItemAmount}>{item.amount}</Text>
@@ -156,7 +125,7 @@ const TermCard = ({ term }: { term: typeof TERMS[0] }) => {
 };
 
 // ─── Payment History Card ────────────────────────────────────────────────────
-const HistoryCard = ({ item }: { item: typeof HISTORY[0] }) => (
+const HistoryCard = ({ item }: { item: any }) => (
   <View style={[styles.historyCard, retroShadow(2, 2, Colors.shadow)]}>
     <View style={styles.historyDate}>
       <Text style={styles.historyDay}>{item.day}</Text>
@@ -180,6 +149,50 @@ const HistoryCard = ({ item }: { item: typeof HISTORY[0] }) => (
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 export default function FeeTracker() {
   const insets = useSafeAreaInsets();
+  const { childId } = useLocalSearchParams();
+  const [feeData, setFeeData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (childId) {
+      apiData<any[]>(`/api/fees/student/${childId}`)
+        .then(res => setFeeData(res || []))
+        .catch(console.warn);
+    }
+  }, [childId]);
+
+  const TERMS = feeData.map((f: any) => {
+    const amountPaid = Number(f.amount_paid) || 0;
+    const amount = Number(f.amount) || 0;
+    const isPaid = f.status === 'paid' || amountPaid >= amount;
+    return {
+      id: String(f.fee_type_id),
+      label: f.name,
+      status: isPaid ? 'PAID' : 'DUE',
+      amount: `₹${f.amount}`,
+      pills: ['Fee', 'Required'],
+      items: [
+        { name: 'Total Fee', amount: `₹${f.amount}` },
+        { name: 'Amount Paid', amount: `₹${amountPaid}` }
+      ]
+    };
+  });
+
+  const HISTORY = feeData.filter(f => f.payment_id).map((f: any) => {
+    const d = new Date(f.payment_date);
+    return {
+      id: String(f.payment_id),
+      day: String(d.getDate()).padStart(2, '0'),
+      month: d.toLocaleString('default', { month: 'short' }),
+      label: f.name + ' Payment',
+      receipt: `RCP-${f.payment_id}`,
+      amount: `₹${f.amount_paid}`
+    };
+  });
+
+  const totalPaid = feeData.reduce((acc, f) => acc + (Number(f.amount_paid) || 0), 0);
+  const totalAmount = feeData.reduce((acc, f) => acc + (Number(f.amount) || 0), 0);
+  const remaining = totalAmount - totalPaid;
+  const progressPct = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -208,16 +221,16 @@ export default function FeeTracker() {
 
           <View style={styles.overviewTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.totalPaid}>₹42,000</Text>
-              <Text style={styles.totalOf}>of ₹60,000 total</Text>
+              <Text style={styles.totalPaid}>₹{totalPaid}</Text>
+              <Text style={styles.totalOf}>of ₹{totalAmount} total</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.remaining}>₹18,000 remaining</Text>
-              <Text style={styles.nextDue}>Next due: May 1st</Text>
+              <Text style={styles.remaining}>₹{remaining} remaining</Text>
+              <Text style={styles.nextDue}>Next due: ASAP</Text>
             </View>
           </View>
 
-          <FeeProgressBar pct={70} />
+          <FeeProgressBar pct={Math.round(progressPct)} />
         </View>
 
         {/* Fee Breakdown */}
@@ -237,7 +250,7 @@ export default function FeeTracker() {
         {/* Pay Now Button */}
         <View style={styles.payNowWrap}>
           <KlassoButton
-            label="Pay Now  ₹18,000"
+            label={`Pay Now ₹${remaining}`}
             variant="primary"
             size="lg"
             leftIcon={<DoodleSparkle size={18} color="white" />}

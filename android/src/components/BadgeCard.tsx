@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import KlassoCard from './KlassoCard';
+import { KlassoCard } from './KlassoCard';
 
 // Badge SVG factory
 const getBadgeSVG = (iconName: string, color: string, size = 48) => {
@@ -83,7 +83,7 @@ const getRarityColor = (rarity: string) => {
   }
 };
 
-export default function BadgeCard({ badge, earnedAt, locked = false, customStyle = {} }) {
+export default function BadgeCard({ badge, earnedAt, locked = false, customStyle = {} }: { badge: any, earnedAt: any, locked?: boolean, customStyle?: any }) {
   const Icon = getBadgeSVG(badge.iconName, badge.color, 48);
   const rarityColor = getRarityColor(badge.rarity);
 
@@ -94,7 +94,7 @@ export default function BadgeCard({ badge, earnedAt, locked = false, customStyle
         locked && styles.lockedCard,
         customStyle
       ]} 
-      variant={locked ? 'default' : 'white'}
+      variant='default'
     >
       <View style={styles.iconContainer}>
         {Icon}

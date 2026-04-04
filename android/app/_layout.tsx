@@ -63,7 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="class-xp" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="mood" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="timecapsule" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="duel/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="duel/[id]" options={{ animation: 'slide_from_right' }} />
       </Stack>
       <StatusBar style="dark" />
     </AuthProvider>

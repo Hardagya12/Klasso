@@ -192,19 +192,48 @@ export default function ParentHome() {
     );
   }
 
-  const activeNode = data.children.find(c => c.student.id === activeChildId) ?? data.children[0];
-  if (!activeNode) return null;
+  if (!data.children || data.children.length === 0) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <DoodleCheckCircle size={80} color={Colors.mint} />
+        <Text style={{ fontFamily: Fonts.headingXB, fontSize: 24, marginTop: 16 }}>No Linked Children</Text>
+        <Text style={{ fontFamily: Fonts.body, fontSize: 16, color: Colors.textMuted, marginTop: 8 }}>Please contact the school admin.</Text>
+        <TouchableOpacity style={styles.bottomLink} onPress={() => router.replace('/login')}>
+            <Text style={{ fontFamily: Fonts.heading, color: Colors.coral }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const activeNode = data.children.find(c => c.student?.id === activeChildId) ?? data.children[0];
+  if (!activeNode || !activeNode.student) return null;
 
   const child = activeNode.student;
   const attendance = activeNode.attendance;
   const latestGrade = activeNode.latest_marks?.grade ?? '-';
   const pendingAssignments = activeNode.pending_assignments;
 
-  const scheduleParams = [
-    { time: '08:00 AM', subject: 'English', teacher: 'Teacher', status: 'done' },
-    { time: '09:00 AM', subject: 'Mathematics', teacher: 'Teacher', status: 'done' },
-    { time: '10:15 AM', subject: 'Science', teacher: 'Teacher', status: 'current' },
-  ];
+  let scheduleParams = activeNode.today_schedule?.map((item: any) => {
+    // determine status based on time (mock logic for demo):
+    const hour = parseInt(item.start_time.split(':')[0], 10);
+    const pm = item.start_time.includes('PM');
+    const realHour = (pm && hour !== 12) ? hour + 12 : hour;
+    const nowHour = new Date().getHours();
+    const status = realHour < nowHour ? 'done' : realHour === nowHour ? 'current' : 'upcoming';
+
+    return {
+      time: item.start_time,
+      subject: item.subject,
+      teacher: item.teacher || 'Teacher',
+      status,
+    };
+  }) || [];
+  
+  if (scheduleParams.length === 0) {
+    scheduleParams = [
+      { time: '08:00 AM', subject: 'No classes today', teacher: '', status: 'done' },
+    ];
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -297,7 +326,7 @@ export default function ParentHome() {
           <Text style={styles.sectionTitle}>Arjun's Day Today</Text>
         </View>
         <View style={[styles.scheduleCard, retroShadow(3, 3, Colors.shadow)]}>
-          {scheduleParams.map((item, idx) => (
+          {scheduleParams.map((item: any, idx: number) => (
             <ScheduleNode key={idx} item={item} isLast={idx === scheduleParams.length - 1} />
           ))}
         </View>

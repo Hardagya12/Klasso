@@ -193,14 +193,17 @@ const getParentDashboard = async (req, res, next) => {
     const parent_id = req.user.id;
 
     const childrenRes = await query(
-      `SELECT st.id, st.roll_no, u.name, c.name AS class_name, c.section
+      `SELECT st.id, st.class_id, st.roll_no, u.name, c.name AS class_name, c.section
        FROM student_parents sp JOIN students st ON st.id=sp.student_id
        JOIN users u ON u.id=st.user_id LEFT JOIN classes c ON c.id=st.class_id
        WHERE sp.parent_id=$1`, [parent_id]
     );
 
+    const jsDay = new Date().getDay();
+    const todayDbDay = jsDay === 0 ? null : jsDay;
+
     const children = await Promise.all(childrenRes.rows.map(async (child) => {
-      const [attRes, marksRes, pendingRes, feeRes, notifRes] = await Promise.all([
+      const [attRes, marksRes, pendingRes, feeRes, notifRes, timetableRes] = await Promise.all([
         query(`SELECT
                  ROUND(COUNT(*) FILTER (WHERE ar.status IN ('present','late'))::numeric/NULLIF(COUNT(*),0)*100,2) AS pct,
                  COUNT(*) FILTER (WHERE ar.status='absent' AND EXTRACT(MONTH FROM s.date)=EXTRACT(MONTH FROM NOW()))::int AS absent_this_month
@@ -221,6 +224,10 @@ const getParentDashboard = async (req, res, next) => {
                WHERE ft.school_id=$2`, [child.id, req.user.school_id]),
         query(`SELECT title, message, created_at FROM notifications
                WHERE user_id=$1 ORDER BY created_at DESC LIMIT 3`, [req.user.id]),
+        todayDbDay ? query(`SELECT ts.period_number, ts.start_time, ts.end_time, s.name AS subject, u.name AS teacher
+               FROM timetable_slots ts JOIN class_subjects cs ON cs.id=ts.class_subject_id
+               JOIN subjects s ON s.id=cs.subject_id LEFT JOIN users u ON u.id=cs.teacher_id
+               WHERE ts.class_id=$1 AND ts.day_of_week=$2 ORDER BY ts.period_number`, [child.class_id, todayDbDay]) : Promise.resolve({ rows: [] }),
       ]);
 
       return {
@@ -235,6 +242,7 @@ const getParentDashboard = async (req, res, next) => {
         pending_assignments: pendingRes.rows[0]?.count || 0,
         fee_due: parseFloat(feeRes.rows[0]?.fee_due) || 0,
         recent_notifications: notifRes.rows,
+        today_schedule: timetableRes.rows,
       };
     }));
 
@@ -247,16 +255,35 @@ const getParentDashboard = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const getStudentDashboard = async (req, res, next) => {
   try {
-    const user_id = req.user.id;
-    const stuRes = await query(
-      `SELECT st.id, st.class_id, st.roll_no, c.name AS class_name, c.section
-       FROM students st
-       LEFT JOIN classes c ON c.id = st.class_id
-       WHERE st.user_id=$1`,
-      [user_id]
-    );
+    const req_student_id = req.params.id;
+    let stuRes;
+    if (req_student_id) {
+       // Check parent authorization
+       if (req.user.role === 'parent') {
+         const link = await query('SELECT 1 FROM student_parents WHERE student_id=$1 AND parent_id=$2', [req_student_id, req.user.id]);
+         if (!link.rows.length) return sendError(res, 'Forbidden', 403);
+       }
+       stuRes = await query(
+         `SELECT st.id, st.class_id, st.roll_no, c.name AS class_name, c.section, u.name AS student_name
+          FROM students st
+          JOIN users u ON u.id = st.user_id
+          LEFT JOIN classes c ON c.id = st.class_id
+          WHERE st.id=$1`,
+         [req_student_id]
+       );
+    } else {
+       const user_id = req.user.id;
+       stuRes = await query(
+         `SELECT st.id, st.class_id, st.roll_no, c.name AS class_name, c.section, u.name AS student_name
+          FROM students st
+          JOIN users u ON u.id = st.user_id
+          LEFT JOIN classes c ON c.id = st.class_id
+          WHERE st.user_id=$1`,
+         [user_id]
+       );
+    }
     if (!stuRes.rows.length) return sendError(res, 'Student record not found', 404);
-    const { id: student_id, class_id, roll_no, class_name, section } = stuRes.rows[0];
+    const { id: student_id, class_id, roll_no, class_name, section, student_name } = stuRes.rows[0];
 
     const jsDay = new Date().getDay();
     const todayDbDay = jsDay === 0 ? null : jsDay;
@@ -310,7 +337,7 @@ const getStudentDashboard = async (req, res, next) => {
 
     return sendSuccess(res, {
       student         : {
-        name: req.user.name,
+        name: student_name,
         class_id,
         class_name: class_name || null,
         section: section || null,

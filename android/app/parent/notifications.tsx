@@ -10,6 +10,8 @@ import {
   DoodleWave, DoodleDiamond, DoodleStarburst,
   Colors, Fonts, Radius,
 } from '@/src/components';
+import { apiData } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Bell SVG ───────────────────────────────────────────────────────────────
 const DoodleBell = ({ size = 28, color = Colors.mint }: { size?: number; color?: string }) => (
@@ -76,19 +78,19 @@ const DateDivider = ({ label }: { label: string }) => (
 );
 
 // ─── TYPE A: Urgent ───────────────────────────────────────────────────────────
-const UrgentCard = () => (
+const UrgentCard = ({ item }: { item: any }) => (
   <View style={[styles.notifCard, styles.urgentCard]}>
     <View style={[styles.leftBorder, { backgroundColor: Colors.coral }]} />
     <View style={styles.cardBody}>
       <View style={styles.cardTopRow}>
         <PulsingDoodle><DoodleSparkle size={18} color={Colors.coral} /></PulsingDoodle>
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.cardTitle}>Absent: Period 3 today</Text>
-          <Text style={styles.cardBody2}>Arjun was marked absent for Science, Period 3</Text>
+          <Text style={styles.cardTitle}>{item?.title || 'Urgent Notice'}</Text>
+          <Text style={styles.cardBody2}>{item?.message}</Text>
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardTime}>10:32 AM</Text>
+        <Text style={styles.cardTime}>{new Date(item?.created_at).toLocaleString()}</Text>
         <KlassoButton label="Call School" variant="ghost" size="sm"
           style={{ borderColor: Colors.coral }} />
       </View>
@@ -97,19 +99,19 @@ const UrgentCard = () => (
 );
 
 // ─── TYPE B: Grade ────────────────────────────────────────────────────────────
-const GradeCard = () => (
+const GradeCard = ({ item }: { item: any }) => (
   <View style={[styles.notifCard, styles.gradeCard]}>
     <View style={[styles.leftBorder, { backgroundColor: Colors.mint }]} />
     <View style={styles.cardBody}>
       <View style={styles.cardTopRow}>
         <DoodleStar size={18} color={Colors.yellow} />
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.cardTitle}>New grade: Math Unit Test — 87/100</Text>
-          <Text style={styles.cardBody2}>Arjun scored above class average ↑</Text>
+          <Text style={styles.cardTitle}>{item?.title || 'New grade'}</Text>
+          <Text style={styles.cardBody2}>{item?.message}</Text>
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardTime}>Yesterday 4:15 PM</Text>
+        <Text style={styles.cardTime}>{new Date(item?.created_at).toLocaleString()}</Text>
         <KlassoButton label="View Grade" variant="ghost" size="sm"
           style={{ borderColor: Colors.mint }} />
       </View>
@@ -118,41 +120,41 @@ const GradeCard = () => (
 );
 
 // ─── TYPE C: Homework ─────────────────────────────────────────────────────────
-const HomeworkCard = () => (
+const HomeworkCard = ({ item }: { item: any }) => (
   <View style={[styles.notifCard, styles.hwCard]}>
     <View style={[styles.leftBorder, { backgroundColor: Colors.yellow }]} />
     <View style={styles.cardBody}>
       <View style={styles.cardTopRow}>
         <DoodleBook size={18} color={Colors.yellowDark} />
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.cardTitle}>New assignment: English Essay</Text>
-          <Text style={styles.cardBody2}>Due Friday, 5th April — 3 days left</Text>
+          <Text style={styles.cardTitle}>{item?.title}</Text>
+          <Text style={styles.cardBody2}>{item?.message}</Text>
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardTime}>Yesterday 2:00 PM</Text>
-        <KlassoBadge label="3 days left" color="yellow" />
+        <Text style={styles.cardTime}>{new Date(item?.created_at).toLocaleString()}</Text>
+        <KlassoBadge label="Check Details" color="yellow" />
       </View>
     </View>
   </View>
 );
 
 // ─── TYPE D: Teacher Message ──────────────────────────────────────────────────
-const MessageCard = () => (
+const MessageCard = ({ item }: { item: any }) => (
   <View style={[styles.notifCard, styles.msgCard]}>
     <View style={[styles.leftBorder, { backgroundColor: '#B5A8FF' }]} />
     <View style={styles.cardBody}>
       <View style={styles.cardTopRow}>
         <DoodleSpeechBubble size={18} color={Colors.purple} />
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.cardTitle}>Mrs. Sharma sent you a message</Text>
+          <Text style={styles.cardTitle}>{item?.title}</Text>
           <Text style={styles.cardBody2} numberOfLines={1}>
-            Arjun's project submission was excellent, well done to both of you!
+            {item?.message}
           </Text>
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardTime}>Mon 9:00 AM</Text>
+        <Text style={styles.cardTime}>{new Date(item?.created_at).toLocaleString()}</Text>
         <KlassoButton label="Reply" variant="ghost" size="sm"
           style={{ borderColor: Colors.purple }} />
       </View>
@@ -161,7 +163,7 @@ const MessageCard = () => (
 );
 
 // ─── TYPE E: Achievement ──────────────────────────────────────────────────────
-const AchievementCard = () => (
+const AchievementCard = ({ item }: { item: any }) => (
   <View style={[styles.notifCard, styles.achieveCard]}>
     <View style={styles.achieveContent}>
       <View style={styles.achieveIconRow}>
@@ -179,8 +181,8 @@ const AchievementCard = () => (
         </View>
         <DoodleStarburst size={32} color={Colors.yellow} />
       </View>
-      <Text style={styles.achieveTitle}>Arjun's attendance streak: 20 days! 🎉</Text>
-      <Text style={styles.achieveSub}>Keep up the great work!</Text>
+      <Text style={styles.achieveTitle}>{item?.title} 🎉</Text>
+      <Text style={styles.achieveSub}>{item?.message}</Text>
       <TouchableOpacity style={styles.shareBtn}>
         <Text style={styles.shareBtnText}>Share →</Text>
       </TouchableOpacity>
@@ -213,6 +215,13 @@ export default function Notifications() {
   const insets = useSafeAreaInsets();
   const [activeFilter, setActiveFilter] = useState('All');
   const [allRead, setAllRead] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiData<any>('/api/notifications')
+      .then(res => setNotifications(res.notifications || res || []))
+      .catch(console.warn);
+  }, []);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -236,47 +245,18 @@ export default function Notifications() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {activeFilter === 'All' || activeFilter === 'Urgent' ? (
-          <>
-            <DateDivider label="Today" />
-            <UrgentCard />
-          </>
-        ) : null}
+        {notifications.map((n, idx) => {
+          if (n.type === 'attendance') return <UrgentCard key={idx} item={n} />;
+          if (n.type === 'exam') return <GradeCard key={idx} item={n} />;
+          if (n.type === 'assignment') return <HomeworkCard key={idx} item={n} />;
+          if (n.type === 'message') return <MessageCard key={idx} item={n} />;
+          if (n.type === 'quest' || n.type === 'fee') return <AchievementCard key={idx} item={n} />;
+          return <MessageCard key={idx} item={n} />;
+        })}
 
-        {activeFilter === 'All' || activeFilter === 'Grades' ? (
-          <>
-            <DateDivider label="Yesterday" />
-            <GradeCard />
-          </>
-        ) : null}
-
-        {activeFilter === 'All' || activeFilter === 'Attendance' ? (
-          <>
-            {activeFilter === 'All' ? null : <DateDivider label="Yesterday" />}
-            <HomeworkCard />
-          </>
-        ) : null}
-
-        {activeFilter === 'All' || activeFilter === 'Messages' ? (
-          <>
-            <DateDivider label="This Week" />
-            <MessageCard />
-          </>
-        ) : null}
-
-        {activeFilter === 'All' && (
-          <>
-            <AchievementCard />
-          </>
+        {notifications.length === 0 && (
+          <EmptyState />
         )}
-
-        {activeFilter !== 'All' &&
-          activeFilter !== 'Urgent' &&
-          activeFilter !== 'Grades' &&
-          activeFilter !== 'Messages' &&
-          activeFilter !== 'Attendance' && (
-            <EmptyState />
-          )}
 
         <View style={{ height: 80 }} />
       </ScrollView>

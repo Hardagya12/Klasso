@@ -1,7 +1,7 @@
 'use strict';
 
 const { prisma } = require('../db/prisma');
-const { generateMoodAlertMessage } = require('../utils/claudeApi');
+const { generateMoodAlertMessage } = require('../services/ai.service');
 
 // Converts Enum to number for calculation
 const moodToScore = (mood) => {

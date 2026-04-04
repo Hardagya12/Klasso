@@ -6,6 +6,8 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { useLocalSearchParams } from 'expo-router';
+import { apiData } from '@/lib/api';
 import {
   KlassoAvatar, KlassoBadge, KlassoButton,
   DoodleSparkle, DoodleCheckCircle, DoodleStar, DoodleBook,
@@ -106,7 +108,7 @@ const CircularProgress = ({ pct, size = 80, color = Colors.mint }: { pct: number
 };
 
 // ─── Collapsible Hero Header ────────────────────────────────────────────────
-const HeroHeader = ({ scrollY, insetTop }: { scrollY: Animated.Value; insetTop: number }) => {
+const HeroHeader = ({ scrollY, insetTop, data }: { scrollY: Animated.Value; insetTop: number; data: any }) => {
   const height = scrollY.interpolate({
     inputRange: [0, HEADER_MAX - HEADER_MIN],
     outputRange: [HEADER_MAX, HEADER_MIN],
@@ -146,14 +148,14 @@ const HeroHeader = ({ scrollY, insetTop }: { scrollY: Animated.Value; insetTop: 
 
         {/* Left Text */}
         <View style={styles.heroExpandedText}>
-          <Text style={styles.heroName}>Arjun Mehta</Text>
+          <Text style={styles.heroName}>{data?.student?.name}</Text>
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
-            <KlassoBadge label="Class 9" color="mint" />
-            <KlassoBadge label="Section A" color="gray" />
+            <KlassoBadge label={data?.student?.class_name || 'Class'} color="mint" />
+            <KlassoBadge label={data?.student?.section || 'Section'} color="gray" />
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
             <DoodleCheckCircle size={14} color={Colors.mint} />
-            <Text style={styles.heroLastSeen}>Last seen: Today 9:03 AM</Text>
+            <Text style={styles.heroLastSeen}>Last seen: Today</Text>
           </View>
         </View>
       </Animated.View>
@@ -165,10 +167,10 @@ const HeroHeader = ({ scrollY, insetTop }: { scrollY: Animated.Value; insetTop: 
             <Path d="M19 12H5M12 5l-7 7 7 7" stroke={Colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </TouchableOpacity>
-        <KlassoAvatar name="Arjun Mehta" size={36} />
+        <KlassoAvatar name={data?.student?.name || 'Student'} size={36} />
         <View>
-          <Text style={styles.collapsedName}>Arjun Mehta</Text>
-          <KlassoBadge label="Class 9 · A" color="mint" />
+          <Text style={styles.collapsedName}>{data?.student?.name}</Text>
+          <KlassoBadge label={`${data?.student?.class_name} · ${data?.student?.section}`} color="mint" />
         </View>
       </Animated.View>
 
@@ -202,15 +204,17 @@ const TabNav = ({ active, onChange }: { active: string; onChange: (t: string) =>
 );
 
 // ─── OVERVIEW TAB ──────────────────────────────────────────────────────────
-const OverviewTab = () => (
+const OverviewTab = ({ data }: { data: any }) => {
+  const attendancePct = data?.attendance?.percentage || 0;
+  return (
   <View style={styles.tabContent}>
     {/* Performance Snapshot */}
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.perfScroll} contentContainerStyle={{ gap: 12, paddingHorizontal: 18 }}>
       {/* Attendance Card */}
       <View style={[styles.perfCard, retroShadow(3, 3, Colors.mintDark)]}>
         <View style={styles.perfCardInner}>
-          <CircularProgress pct={94} size={72} color={Colors.mint} />
-          <Text style={styles.perfPct}>94%</Text>
+          <CircularProgress pct={attendancePct} size={72} color={Colors.mint} />
+          <Text style={styles.perfPct}>{attendancePct}%</Text>
         </View>
         <Text style={styles.perfLabel}>Attendance</Text>
         <DoodleCheckCircle size={14} color={Colors.mint} />
@@ -219,18 +223,18 @@ const OverviewTab = () => (
       {/* Grade Card */}
       <View style={[styles.perfCard, retroShadow(3, 3, Colors.purpleDark), { borderColor: Colors.purple }]}>
         <Text style={styles.perfGradeLetter}>A-</Text>
-        <Text style={styles.perfGpaText}>GPA 3.7</Text>
+        <Text style={styles.perfGpaText}>GPA {data?.marks?.cgpa || 'N/A'}</Text>
         <Text style={styles.perfLabel}>Avg Grade</Text>
         <DoodleStar size={14} color={Colors.purple} />
       </View>
 
       {/* Assignment Card */}
       <View style={[styles.perfCard, retroShadow(3, 3, Colors.coralDark), { borderColor: Colors.coral }]}>
-        <Text style={styles.perfGradeLetter}>18/22</Text>
+        <Text style={styles.perfGradeLetter}>{data?.pending_assignments?.length || 0}</Text>
         <View style={styles.perfBar}>
-          <View style={[styles.perfBarFill, { width: `${(18 / 22) * 100}%`, backgroundColor: Colors.coral }]} />
+          <View style={[styles.perfBarFill, { width: `50%`, backgroundColor: Colors.coral }]} />
         </View>
-        <Text style={styles.perfLabel}>Assignments</Text>
+        <Text style={styles.perfLabel}>Pend. Assign.</Text>
         <DoodleBook size={14} color={Colors.coral} />
       </View>
     </ScrollView>
@@ -296,7 +300,8 @@ const OverviewTab = () => (
       ))}
     </ScrollView>
   </View>
-);
+  );
+};
 
 // ─── ATTENDANCE TAB ─────────────────────────────────────────────────────────
 const AttendanceTab = () => (
@@ -448,23 +453,33 @@ const MessagesTab = () => {
 // ─── MAIN SCREEN ───────────────────────────────────────────────────────────
 export default function ChildOverview() {
   const insets = useSafeAreaInsets();
+  const { childId } = useLocalSearchParams();
+  const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('Overview');
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  React.useEffect(() => {
+    if (childId) {
+      apiData(`/api/analytics/student/${childId}`).then(setData).catch(console.warn);
+    }
+  }, [childId]);
+
+  if (!data) return null;
+
   const renderTab = () => {
     switch (activeTab) {
-      case 'Overview':   return <OverviewTab />;
+      case 'Overview':   return <OverviewTab data={data} />;
       case 'Attendance': return <AttendanceTab />;
       case 'Grades':     return <GradesTab />;
       case 'Messages':   return <MessagesTab />;
-      default:           return <OverviewTab />;
+      default:           return <OverviewTab data={data} />;
     }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       {/* Collapsible Hero */}
-      <HeroHeader scrollY={scrollY} insetTop={insets.top} />
+      <HeroHeader scrollY={scrollY} insetTop={insets.top} data={data} />
 
       {/* Sticky Tab Nav */}
       <TabNav active={activeTab} onChange={setActiveTab} />

@@ -2,7 +2,7 @@
 
 const { query } = require('../db/neon');
 const { sendSuccess, sendError } = require('../utils/response');
-const { generateLessonPlan: callLessonPlanAI } = require('../utils/claudeApi');
+const { generateLessonPlan: callLessonPlanAI } = require('../services/ai.service');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lesson-plans  — ?class_subject_id=&week_start=

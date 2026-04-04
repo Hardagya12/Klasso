@@ -1,7 +1,7 @@
 'use strict';
 
 const { query } = require('../db/neon');
-const { generateSubBriefingSummary } = require('../utils/claudeApi');
+const { generateSubBriefing: generateSubBriefingAI } = require('../services/ai.service');
 const { createNotification } = require('../utils/notificationHelper');
 
 /**
@@ -181,7 +181,7 @@ const generateSubBriefing = async (substitutionId) => {
   };
 
   // ── 11. Generate AI summary ────────────────────────────────────────────────
-  const aiSummary = await generateSubBriefingSummary(content);
+  const aiSummary = await generateSubBriefingAI(content);
 
   // ── 12. Persist briefing (upsert) ─────────────────────────────────────────
   await query(

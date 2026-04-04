@@ -26,7 +26,7 @@ export default function DuelScreen() {
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
   const [questionResult, setQuestionResult] = useState<any>(null);
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
   useEffect(() => {

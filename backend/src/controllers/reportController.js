@@ -3,7 +3,7 @@
 const { query } = require('../db/neon');
 const { sendSuccess, sendError } = require('../utils/response');
 const { getGradeLetter } = require('../utils/gradeCalculator');
-const { generateStudentReport } = require('../utils/claudeApi');
+const { generateProgressReport } = require('../services/ai.service');
 const { createNotification, createNotificationsForMany } = require('../utils/notificationHelper');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,16 @@ const generateReport = async (req, res, next) => {
 
     let content;
     try {
-      content = await generateStudentReport(studentData);
+      content = await generateProgressReport({
+        studentName: studentData.name,
+        className: `${studentData.class_name}-${studentData.section}`,
+        term: 'Final Term',
+        attendance: { overall: studentData.attendance_percentage, bySubject: {} },
+        grades: studentData.marks.map(m => ({ subject: m.subject_name || 'Subject', percentage: m.percentage, trend: 'consistent' })),
+        tone: 'encouraging',
+        language: 'English',
+        options: { includesAttendance: true, includesGrades: true }
+      });
     } catch (apiErr) {
       console.error('[Claude API Error]', apiErr.message);
       return res.status(503).json({

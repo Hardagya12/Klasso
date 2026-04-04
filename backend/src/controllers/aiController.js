@@ -1,7 +1,7 @@
 'use strict';
 
 const { sendSuccess, sendError } = require('../utils/response');
-const { chatStudentBuddy } = require('../utils/claudeApi');
+const { answerStudyQuestion } = require('../services/ai.service');
 const questService = require('../utils/questService');
 
 /**
@@ -10,8 +10,8 @@ const questService = require('../utils/questService');
  */
 const postChat = async (req, res, next) => {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return sendError(res, 'AI assistant is not configured (set ANTHROPIC_API_KEY)', 503);
+    if (!process.env.GEMINI_API_KEY) {
+      return sendError(res, 'AI assistant is not configured (set GEMINI_API_KEY)', 503);
     }
 
     const { messages } = req.body;
@@ -19,10 +19,10 @@ const postChat = async (req, res, next) => {
       return sendError(res, 'messages array is required', 400);
     }
 
-    const reply = await chatStudentBuddy(messages, {
-      name: req.user.name,
-      role: req.user.role,
-    });
+    // Extract the last message as the new question, everything before as history
+    const lastMessage = messages[messages.length - 1]?.content || '';
+    const history = messages.slice(0, -1);
+    const reply = await answerStudyQuestion(history, lastMessage);
 
     // Fire quest completion check for AI sessions (aichat trigger)
     if (req.user.role === 'student') {

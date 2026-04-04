@@ -2,7 +2,7 @@
 
 const { query } = require('../db/neon');
 const { sendSuccess, sendError } = require('../utils/response');
-const { generateStudentReport } = require('../utils/claudeApi');
+const { generateProgressReport } = require('../services/ai.service');
 const { createNotification } = require('../utils/notificationHelper');
 
 // GET /api/documents/student/:id
@@ -55,16 +55,6 @@ const generateDocument = async (req, res, next) => {
     else if (type === 'character_certificate') prompt_type = `Character Certificate (attests good conduct)`;
     else return sendError(res, 'Invalid document type. Use: bonafide, transfer_certificate, character_certificate', 400);
 
-    const studentData = {
-      name: s.name,
-      class_name: s.class_name,
-      section: s.section,
-      attendance_percentage: 0,
-      marks: [],
-      overall_percentage: 0,
-      overall_grade: '',
-    };
-
     // Build document content with school letterhead via Claude
     const systemPrompt = `You are a school administrator generating official school documents. Format the document professionally with letterhead, reference number, and proper closing.`;
     const userPrompt = `Generate a ${prompt_type} for:
@@ -86,40 +76,8 @@ Format it as a proper official document with reference number, body, and signatu
 
     let content;
     try {
-      const { callClaude } = require('../utils/claudeApi');
-      // Use direct API call since we need custom prompts
-      const https = require('https');
-      content = await new Promise((resolve, reject) => {
-        const body = JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 800,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
-        });
-        const options = {
-          hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
-            'Content-Length': Buffer.byteLength(body),
-          },
-        };
-        const r = https.request(options, (res) => {
-          let d = '';
-          res.on('data', c => d += c);
-          res.on('end', () => {
-            try {
-              const p = JSON.parse(d);
-              if (p.error) return reject(new Error(p.error.message));
-              resolve(p.content?.[0]?.text || '');
-            } catch(e) { reject(e); }
-          });
-        });
-        r.on('error', reject);
-        r.write(body);
-        r.end();
-      });
+      const { generate } = require('../services/ai.service');
+      content = await generate(`${systemPrompt}\n\n${userPrompt}`, 800);
     } catch (aiErr) {
       // Fallback: plain text document
       content = `${s.school_name}\n${s.school_address}\n\n${prompt_type.toUpperCase()}\n\nDate: ${today}\n\nThis is to certify that ${s.name} (Admission No: ${s.admission_no}) is/was a bonafide student of Class ${s.class_name}-${s.section} during the academic year ${academic_year}.\n\nPrincipal\n${s.school_name}`;

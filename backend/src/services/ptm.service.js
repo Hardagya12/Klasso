@@ -1,7 +1,7 @@
 'use strict';
 
 const { prisma } = require('../db/prisma');
-const { generatePTMTalkingPoints, generatePTMPostSummary } = require('../utils/claudeApi');
+const { generatePTMTalkingPoints, generatePTMSummary } = require('../services/ai.service');
 
 /**
  * Service specifically for fetching student data and combining it with AI logic for PTMs.
@@ -95,13 +95,18 @@ class PTMService {
     const studentName = `${slot.student.firstName} ${slot.student.lastName}`;
 
     // Generate AI Summary
-    const finalSummary = await generatePTMPostSummary(studentName, teacherNotes);
+    const summary = await generatePTMSummary({ 
+      studentName, 
+      teacherNotes,
+      teacherName: 'Your Teacher',
+      talkingPoints: slot.talkingPoints || []
+    });
 
     // Save to slot
     const updatedSlot = await prisma.pTMSlot.update({
       where: { id: slotId },
       data: {
-        summary: finalSummary,
+        summary: summary,
         summarysentAt: new Date(),
         status: 'COMPLETED'
       }

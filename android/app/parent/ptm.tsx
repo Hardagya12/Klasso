@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { apiData } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface PTMSlot {
@@ -43,40 +45,21 @@ const CalendarSvg = () => (
 
 export default function PTMScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'COMPLETED'>('UPCOMING');
   const [slots, setSlots] = useState<PTMSlot[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSlots();
-  }, []);
+    if (user?.id) fetchSlots();
+  }, [user]);
 
   const fetchSlots = async () => {
     try {
-      // Stub parentId fetch
-      // In reality, use useAuth().user.id
-      const parentId = 'placeholder-parent-id'; 
-      // For demo we mock the API return or fetch actual backend if user exists
-      // const token = await SecureStore.getItemAsync('klasso_token');
-      // const res = await fetch(`http://localhost:3001/api/ptm/parent/${parentId}`);
-      // const data = await res.json();
-      
-      // MOCK DATA for verification since mobile emulator might not hit loopback correctly without config
-      setTimeout(() => {
-        setSlots([
-          {
-            id: '1', ptmEventId: 'e1', scheduledAt: new Date(Date.now() + 86400000).toISOString(), duration: 10,
-            status: 'CONFIRMED', summary: null, teacher: { name: 'Mrs. Sharma' }, student: { firstName: 'Arya' }
-          },
-          {
-            id: '2', ptmEventId: 'e1', scheduledAt: new Date(Date.now() - 86400000).toISOString(), duration: 10,
-            status: 'COMPLETED', summary: 'It was wonderful speaking with you about Arya\'s progress today! We discussed strategies to support their continued growth in Math. Please reach out if you have any more questions.',
-            teacher: { name: 'Mr. Verma' }, student: { firstName: 'Arya' }
-          }
-        ]);
-        setLoading(false);
-      }, 800);
-
+      if (!user?.id) return;
+      const res = await apiData<PTMSlot[]>(`/api/ptm/parent/${user.id}`);
+      setSlots(res || []);
+      setLoading(false);
     } catch (e) {
       console.error(e);
       setLoading(false);

@@ -12,6 +12,7 @@ router.get('/admin',   authorizeRole('admin'),           getAdminDashboard);
 router.get('/teacher', authorizeRole('teacher','admin'), getTeacherDashboard);
 router.get('/parent',  authorizeRole('parent'),          getParentDashboard);
 router.get('/student', authorizeRole('student'),         getStudentDashboard);
+router.get('/student/:id', authorizeRole('parent', 'admin', 'teacher'), getStudentDashboard);
 router.get('/class/:id', authorizeRole('teacher','admin'), getClassAnalytics);
 router.get('/export/attendance', authorizeRole('teacher','admin'), exportAttendanceReport);
 router.get('/export/marks',      authorizeRole('teacher','admin'), exportMarksReport);
