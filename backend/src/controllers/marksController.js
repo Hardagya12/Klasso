@@ -132,7 +132,7 @@ const getMarksGrid = async (req, res, next) => {
 
     // Fetch all marks for this exam + class
     const marksRes = await query(
-      `SELECT m.student_id, es.subject_id, m.score, m.grade, m.remarks
+      `SELECT m.id, m.student_id, es.subject_id, m.score, m.grade, m.remarks
        FROM marks m
        JOIN exam_subjects es ON es.id=m.exam_subject_id
        WHERE es.exam_id=$1
@@ -158,7 +158,7 @@ const getMarksGrid = async (req, res, next) => {
         const m = marksIndex[stu.id]?.[subj.subject_id];
         if (m) {
           const passed = isPassing(m.score, subj.max_marks);
-          marksMap[subj.subject_id] = { score: m.score, grade: m.grade, remarks: m.remarks, passed };
+          marksMap[subj.subject_id] = { id: m.id, score: m.score, grade: m.grade, remarks: m.remarks, passed };
           totalScore += parseFloat(m.score);
           maxScore   += parseFloat(subj.max_marks);
           gradePoints.push(getGradePoint(m.grade));

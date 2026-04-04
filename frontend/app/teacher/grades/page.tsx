@@ -1,7 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
+import { apiData, apiPaginated } from "../../../lib/api";
+
+type ClassData = { id: string; name: string; section: string };
+type ExamData = { id: string; name: string };
+type SubjectData = { subject_id: string; name: string; code?: string; exam_subject_id: string; max_marks: string };
+type StudentData = { id: string; name: string; roll_no: string };
+type MarkRow = {
+  student: StudentData;
+  marks: Record<string, { id: string; score: string; grade: string; remarks: string; passed: boolean } | null>;
+  totals: any;
+};
+
 
 // ═══════════════════════════════════════════════
 //  SVG DOODLES
@@ -142,26 +154,7 @@ const SquiggleUnderline = ({ width = 80, color = "#4A90D9" }) => (
 //  DATA
 // ═══════════════════════════════════════════════
 
-const STUDENTS_DATA = [
-  { id: 1, name: "Aarav Patel",      roll: "01" },
-  { id: 2, name: "Ananya Sharma",    roll: "02" },
-  { id: 3, name: "Arjun Mehta",      roll: "03" },
-  { id: 4, name: "Divya Singh",      roll: "04" },
-  { id: 5, name: "Ishaan Kumar",     roll: "05" },
-  { id: 6, name: "Kavya Reddy",      roll: "06" },
-  { id: 7, name: "Manav Joshi",      roll: "07" },
-  { id: 8, name: "Nisha Verma",      roll: "08" },
-  { id: 9, name: "Om Mishra",        roll: "09" },
-  { id: 10, name: "Prachi Agarwal",  roll: "10" },
-  { id: 11, name: "Rahul Gupta",     roll: "11" },
-  { id: 12, name: "Riya Chopra",     roll: "12" },
-];
-
-const INITIAL_SCORES: Record<number, string> = {
-  1: "92", 2: "78", 3: "85", 4: "61", 5: "95",
-  6: "73", 7: "88", 8: "54", 9: "67", 10: "91",
-  11: "42", 12: "83",
-};
+// removed hardcoded INITIAL_SCORES and STUDENTS_DATA
 
 const FEEDBACK_BANK: Record<string, string[]> = {
   encouraging: [
@@ -203,8 +196,10 @@ const gradeStyle: Record<string, { bg: string; text: string; border: string }> =
   F: { bg: "#F5E6E5", text: "#8B0000", border: "#C00000" },
 };
 
-const avatarColor = (id: number) =>
-  ["#FFD6E0", "#D6EAF8", "#D5F5E3", "#FEF9E7", "#F9EBEA", "#E8DAEF"][id % 6];
+const avatarColor = (id: string) => {
+  const hash = Array.from(id).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return ["#FFD6E0", "#D6EAF8", "#D5F5E3", "#FEF9E7", "#F9EBEA", "#E8DAEF"][hash % 6];
+};
 
 const initials = (name: string) =>
   name.split(" ").map(n => n[0]).join("").toUpperCase();
@@ -253,23 +248,100 @@ function MiniDistBar({ grades }: { grades: string[] }) {
 type Tone = "encouraging" | "constructive" | "formal";
 
 export default function GradesFeedbackPage() {
-  const [scores, setScores] = useState<Record<number, string>>(INITIAL_SCORES);
-  const [feedbacks, setFeedbacks] = useState<Record<number, string>>({});
-  const [selectedStudent, setSelectedStudent] = useState<number>(1);
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [exams, setExams] = useState<ExamData[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [selectedExamId, setSelectedExamId] = useState<string>("");
+  
+  const [subjects, setSubjects] = useState<SubjectData[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  
+  const [studentsData, setStudentsData] = useState<StudentData[]>([]);
+  const [gridRows, setGridRows] = useState<MarkRow[]>([]);
+  
+  const [scores, setScores] = useState<Record<string, string>>({});
+  const [feedbacks, setFeedbacks] = useState<Record<string, string>>({});
+  const [markIds, setMarkIds] = useState<Record<string, string>>({}); // studentId -> markId
+  
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [tone, setTone] = useState<Tone>("encouraging");
   const [previewFeedback, setPreviewFeedback] = useState<string>("");
   const [generating, setGenerating] = useState<boolean>(false);
   const [generatingAll, setGeneratingAll] = useState<boolean>(false);
-  const [savedFeedback, setSavedFeedback] = useState<Record<number, boolean>>({});
+  const [savedFeedback, setSavedFeedback] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
 
-  const getScore = (id: number) => {
+  useEffect(() => {
+    async function loadInitial() {
+      try {
+        const clsRes = await apiPaginated<ClassData>("/api/classes");
+        const cls = clsRes.data || [];
+        setClasses(cls);
+        if (cls.length > 0) setSelectedClassId(cls[0].id);
+
+        const exRes = await apiData<any>("/api/exams");
+        const exms = exRes || [];
+        setExams(exms);
+        if (exms.length > 0) setSelectedExamId(exms[0].id);
+      } catch (err) { }
+    }
+    loadInitial();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedClassId || !selectedExamId) return;
+    async function fetchMarks() {
+      setLoading(true);
+      try {
+        const res = await apiData<any>(`/api/marks?class_id=${selectedClassId}&exam_id=${selectedExamId}`);
+        const sbj = res.subjects || [];
+        setSubjects(sbj);
+        if (sbj.length > 0 && !selectedSubjectId) setSelectedSubjectId(sbj[0].subject_id);
+        
+        const rows = res.rows || [];
+        setGridRows(rows);
+        setStudentsData(rows.map((r: any) => r.student));
+        
+        if (rows.length > 0 && !selectedStudent) {
+          setSelectedStudent(rows[0].student.id);
+        }
+      } catch (err) {
+        setGridRows([]);
+        setStudentsData([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMarks();
+  }, [selectedClassId, selectedExamId]);
+
+  useEffect(() => {
+    if (!selectedSubjectId || gridRows.length === 0) return;
+    const newScores: Record<string, string> = {};
+    const newFeedbacks: Record<string, string> = {};
+    const newMarkIds: Record<string, string> = {};
+    
+    gridRows.forEach(row => {
+      const mark = row.marks[selectedSubjectId];
+      if (mark) {
+        newScores[row.student.id] = String(mark.score);
+        newFeedbacks[row.student.id] = mark.remarks || "";
+        if (mark.id) newMarkIds[row.student.id] = mark.id;
+      }
+    });
+    setScores(newScores);
+    setFeedbacks(newFeedbacks);
+    setMarkIds(newMarkIds);
+  }, [selectedSubjectId, gridRows]);
+
+  const getScore = (id: string) => {
     const v = scores[id];
     if (!v) return NaN;
-    const n = parseInt(v, 10);
+    const n = parseFloat(v);
     return isNaN(n) ? NaN : Math.min(100, Math.max(0, n));
   };
 
-  const validScores = STUDENTS_DATA
+  const validScores = studentsData
     .map(s => getScore(s.id))
     .filter(n => !isNaN(n));
 
@@ -277,13 +349,14 @@ export default function GradesFeedbackPage() {
     ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
     : 0;
 
-  const gradeList = STUDENTS_DATA.map(s => {
+  const gradeList = studentsData.map(s => {
     const sc = getScore(s.id);
     return isNaN(sc) ? "–" : calcGrade(sc);
   }).filter(g => g !== "–");
 
-  const handleGenerateSingle = (studentId: number) => {
-    const student = STUDENTS_DATA.find(s => s.id === studentId)!;
+  const handleGenerateSingle = (studentId: string) => {
+    const student = studentsData.find(s => s.id === studentId);
+    if (!student) return;
     const sc = getScore(studentId);
     if (isNaN(sc)) return;
     setSelectedStudent(studentId);
@@ -298,8 +371,8 @@ export default function GradesFeedbackPage() {
   const handleGenerateAll = () => {
     setGeneratingAll(true);
     setTimeout(() => {
-      const newFeedbacks: Record<number, string> = {};
-      STUDENTS_DATA.forEach(s => {
+      const newFeedbacks: Record<string, string> = { ...feedbacks };
+      studentsData.forEach(s => {
         const sc = getScore(s.id);
         if (!isNaN(sc)) {
           newFeedbacks[s.id] = generateFeedback(s.name, sc, tone);
@@ -307,23 +380,65 @@ export default function GradesFeedbackPage() {
       });
       setFeedbacks(newFeedbacks);
       setGeneratingAll(false);
-      // Also set preview to selected student
       const selSc = getScore(selectedStudent);
-      const selSt = STUDENTS_DATA.find(s => s.id === selectedStudent)!;
-      if (!isNaN(selSc)) {
+      const selSt = studentsData.find(s => s.id === selectedStudent);
+      if (selSt && !isNaN(selSc)) {
         setPreviewFeedback(generateFeedback(selSt.name, selSc, tone));
       }
     }, 1500);
   };
 
-  const handleApprove = () => {
-    setFeedbacks(prev => ({ ...prev, [selectedStudent]: previewFeedback }));
-    setSavedFeedback(prev => ({ ...prev, [selectedStudent]: true }));
-    setTimeout(() => setSavedFeedback(prev => ({ ...prev, [selectedStudent]: false })), 2000);
+  const handleApprove = async () => {
+    if (!selectedStudent || !selectedSubjectId) return;
+    const scoreStr = scores[selectedStudent];
+    const fbText = previewFeedback || feedbacks[selectedStudent];
+    
+    // Save locally
+    setFeedbacks(prev => ({ ...prev, [selectedStudent]: fbText }));
+    
+    // Send to backend
+    try {
+      await apiData("/api/marks/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          exam_id: selectedExamId,
+          marks: [{
+            student_id: selectedStudent,
+            subject_id: selectedSubjectId,
+            score: scoreStr,
+            remarks: fbText
+          }]
+        })
+      });
+      setSavedFeedback(prev => ({ ...prev, [selectedStudent]: true }));
+      setTimeout(() => setSavedFeedback(prev => ({ ...prev, [selectedStudent]: false })), 2000);
+      
+      // refresh marks to get mark id if it was newly created
+      const res = await apiData<any>(`/api/marks?class_id=${selectedClassId}&exam_id=${selectedExamId}`);
+      if (res.rows) setGridRows(res.rows);
+    } catch(err) {
+      alert("Failed to save mark.");
+    }
+  };
+
+  const handleDeleteMark = async (studentId: string) => {
+    const mId = markIds[studentId];
+    if (mId) {
+       try {
+         await apiData(`/api/marks/${mId}`, { method: "DELETE" });
+       } catch (err) {
+         alert("Failed to delete mark");
+         return;
+       }
+    }
+    setScores(prev => { const n = {...prev}; delete n[studentId]; return n; });
+    setFeedbacks(prev => { const n = {...prev}; delete n[studentId]; return n; });
+    setMarkIds(prev => { const n = {...prev}; delete n[studentId]; return n; });
   };
 
   const handleRegenerate = () => {
-    const student = STUDENTS_DATA.find(s => s.id === selectedStudent)!;
+    const student = studentsData.find(s => s.id === selectedStudent);
+    if (!student) return;
     const sc = getScore(selectedStudent);
     if (isNaN(sc)) return;
     setGenerating(true);
@@ -334,7 +449,7 @@ export default function GradesFeedbackPage() {
     }, 700);
   };
 
-  const selectedStudentData = STUDENTS_DATA.find(s => s.id === selectedStudent)!;
+  const selectedStudentData = studentsData.find(s => s.id === selectedStudent);
   const selectedScore = getScore(selectedStudent);
 
   return (
@@ -380,7 +495,17 @@ export default function GradesFeedbackPage() {
             <div className="relative flex flex-col gap-0.5">
               <span style={{ fontFamily: '"Caveat", cursive', fontSize: "13px", color: "#7A7670", fontWeight: 700, paddingLeft: "4px" }}>Subject</span>
               <div className="flex items-center gap-2 border-2 border-[#2C2A24] rounded-[10px] px-4 py-2 bg-white shadow-[2px_2px_0px_#2C2A24] cursor-pointer hover:shadow-[1px_1px_0px_#2C2A24] hover:translate-x-[1px] hover:translate-y-[1px] transition-all">
-                <span className="font-heading font-bold text-[#2C2A24] text-sm" style={{ fontFamily: '"Nunito", sans-serif' }}>Mathematics</span>
+                <select 
+                   value={selectedSubjectId} 
+                   onChange={e => setSelectedSubjectId(e.target.value)} 
+                   className="font-heading font-bold text-[#2C2A24] text-sm bg-transparent outline-none cursor-pointer appearance-none" style={{ fontFamily: '"Nunito", sans-serif' }}
+                >
+                  {subjects.length > 0 ? subjects.map(s => (
+                    <option key={s.subject_id} value={s.subject_id}>{s.name}</option>
+                  )) : (
+                    <option value="">No Subjects</option>
+                  )}
+                </select>
                 <DownChevron size={16} />
               </div>
             </div>
@@ -419,21 +544,26 @@ export default function GradesFeedbackPage() {
             FILTERS BAR
         ════════════════════════════════ */}
         <div className="flex items-end gap-4 mb-8 flex-wrap">
-          {[
-            { label: "Class", value: "Class 8-A", items: ["Class 8-A", "Class 9-B", "Class 10-C"] },
-            { label: "Subject", value: "Mathematics", items: ["Mathematics", "Science", "English"] },
-            { label: "Assessment Type", value: "Exam", items: ["Exam", "Assignment", "Practical"] },
-            { label: "Term", value: "Mid-term · 2025", items: ["Mid-term · 2025", "Final · 2025", "Unit Test 1"] },
-          ].map(filter => (
-            <div key={filter.label} className="flex flex-col gap-1">
-              <span style={{ fontFamily: '"Caveat", cursive', fontSize: "14px", color: "#7A7670", fontWeight: 700 }}>{filter.label}</span>
+            <div className="flex flex-col gap-1">
+              <span style={{ fontFamily: '"Caveat", cursive', fontSize: "14px", color: "#7A7670", fontWeight: 700 }}>Class</span>
               <div className="relative flex items-center gap-2 border-2 border-[#2C2A24] rounded-[8px] px-4 py-2 bg-white cursor-pointer hover:bg-[#FDFBF5] transition-colors min-w-[130px]"
                 style={{ boxShadow: "2px 2px 0px #2C2A24", fontFamily: '"DM Sans", sans-serif' }}>
-                <span className="font-body text-[#2C2A24] text-sm font-medium flex-1">{filter.value}</span>
-                <DownChevron size={14} />
+                 <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full bg-transparent outline-none font-medium appearance-none">
+                   {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
+                 </select>
+                 <DownChevron size={14} />
               </div>
             </div>
-          ))}
+            <div className="flex flex-col gap-1">
+              <span style={{ fontFamily: '"Caveat", cursive', fontSize: "14px", color: "#7A7670", fontWeight: 700 }}>Exam</span>
+              <div className="relative flex items-center gap-2 border-2 border-[#2C2A24] rounded-[8px] px-4 py-2 bg-white cursor-pointer hover:bg-[#FDFBF5] transition-colors min-w-[130px]"
+                style={{ boxShadow: "2px 2px 0px #2C2A24", fontFamily: '"DM Sans", sans-serif' }}>
+                 <select value={selectedExamId} onChange={e => setSelectedExamId(e.target.value)} className="w-full bg-transparent outline-none font-medium appearance-none">
+                   {exams.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                 </select>
+                 <DownChevron size={14} />
+              </div>
+            </div>
         </div>
 
         {/* ════════════════════════════════
@@ -449,12 +579,12 @@ export default function GradesFeedbackPage() {
               <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#E8E4D9] bg-[#FDFBF5]">
                 <div className="flex items-center gap-2">
                   <span className="font-heading font-extrabold text-[#2C2A24] text-lg" style={{ fontFamily: '"Nunito", sans-serif' }}>
-                    Class 8-A · Mid-term Exam
+                    {classes.find(c => c.id === selectedClassId)?.name} · {exams.find(e => e.id === selectedExamId)?.name}
                   </span>
                   <PaperFoldDoodle size={22} />
                 </div>
                 <span style={{ fontFamily: '"Caveat", cursive', fontSize: "14px", color: "#7A7670", fontWeight: 600 }}>
-                  {validScores.length}/{STUDENTS_DATA.length} graded
+                  {validScores.length}/{studentsData.length} graded
                 </span>
               </div>
 
@@ -472,7 +602,11 @@ export default function GradesFeedbackPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {STUDENTS_DATA.map((student, idx) => {
+                    {loading ? (
+                      <tr><td colSpan={6} className="text-center py-8">Loading...</td></tr>
+                    ) : studentsData.length === 0 ? (
+                      <tr><td colSpan={6} className="text-center py-8">No students found.</td></tr>
+                    ) : studentsData.map((student, idx) => {
                       const scoreVal = getScore(student.id);
                       const grade = isNaN(scoreVal) ? null : calcGrade(scoreVal);
                       const gs = grade ? gradeStyle[grade] : null;
@@ -585,8 +719,7 @@ export default function GradesFeedbackPage() {
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  setScores(prev => { const n = {...prev}; delete n[student.id]; return n; });
-                                  setFeedbacks(prev => { const n = {...prev}; delete n[student.id]; return n; });
+                                  handleDeleteMark(student.id);
                                 }}
                                 className="p-1.5 rounded-[6px] hover:bg-[#FDEDEC] transition-colors"
                                 title="Clear row">
@@ -640,12 +773,12 @@ export default function GradesFeedbackPage() {
               <div className="px-5 pt-4 pb-3 border-b border-[#E8E4D9]">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full flex items-center justify-center font-heading font-extrabold text-sm border-2 border-[#2C2A24]"
-                    style={{ backgroundColor: avatarColor(selectedStudent), fontFamily: '"Nunito", sans-serif' }}>
-                    {initials(selectedStudentData.name)}
+                    style={{ backgroundColor: selectedStudentData ? avatarColor(selectedStudent) : "#eee", fontFamily: '"Nunito", sans-serif' }}>
+                    {selectedStudentData ? initials(selectedStudentData.name) : ""}
                   </div>
                   <div>
                     <p className="font-heading font-bold text-[#2C2A24] text-sm" style={{ fontFamily: '"Nunito", sans-serif' }}>
-                      {selectedStudentData.name}
+                      {selectedStudentData?.name || "Select a student"}
                     </p>
                     <p style={{ fontFamily: '"Caveat", cursive', fontSize: "14px", color: "#7A7670", fontWeight: 600 }}>
                       Score: {isNaN(selectedScore) ? "—" : `${selectedScore}/100`}
