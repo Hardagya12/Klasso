@@ -282,6 +282,75 @@ Output MUST be valid JSON, containing exactly these keys:
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateSubBriefingSummary
+// ─────────────────────────────────────────────────────────────────────────────
+const generateSubBriefingSummary = async (classData) => {
+  const systemPrompt = `You are generating a substitute teacher briefing for a teacher covering a class they don't know.
+Write a friendly, practical 3-paragraph briefing (under 120 words total).
+Paragraph 1: Quick class overview and vibe (1-2 sentences, warm tone).
+Paragraph 2: Key things to know — who's engaged, who might need attention (no diagnoses, just observations).
+Paragraph 3: What the class has been working on and any notes for today.
+Tone: one colleague briefing another. Do NOT invent data — use only what is provided.`;
+
+  const userPrompt = `Class data:\n${JSON.stringify(classData)}\n\nWrite the 3-paragraph briefing now.`;
+
+  try {
+    return await callClaude(systemPrompt, userPrompt, 400);
+  } catch (err) {
+    console.error('SubBriefing AI error:', err.message);
+    const { classInfo } = classData;
+    return `${classInfo.name} ${classInfo.section} is a class of ${classInfo.studentCount} students studying ${classInfo.subject}. Class attendance is around ${classData.avgAttendance}%. They are currently working on ${classData.subjectProgress?.recentTopic || 'recent curriculum topics'}. Good luck today — you've got this!`;
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+// generatePTMTalkingPoints
+// ─────────────────────────────────────────────────────────────────────────────
+const generatePTMTalkingPoints = async (studentData) => {
+  const systemPrompt = `You are an AI assistant helping a teacher prepare for a 10-minute Parent-Teacher Meeting.
+Review the student data provided and generate 4-6 specific talking points (bullet points).
+Include a mix of achievements and constructive areas for improvement.
+Ensure output is pure JSON matching this exact shape: 
+[
+  { "type": "positive" | "concern" | "neutral", "point": "The actual talking point text (1-2 sentences)" }
+]`;
+
+  const userPrompt = `Student Data:\n${JSON.stringify(studentData)}\n\nGenerate the JSON array of talking points.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, 600);
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('PTM Talking Points AI error:', err.message);
+    return [
+      { type: 'neutral', point: 'Discuss overall academic progress this term.' },
+      { type: 'neutral', point: 'Review attendance and participation.' }
+    ];
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generatePTMPostSummary
+// ─────────────────────────────────────────────────────────────────────────────
+const generatePTMPostSummary = async (studentName, notes) => {
+  const systemPrompt = `You are a warm, professional teacher writing a quick post-meeting summary to send to parents after a parent-teacher meeting.
+Write exactly 3 friendly sentences summarizing the meeting notes provided. Do not use generic placeholders.`;
+
+  const userPrompt = `Student: ${studentName}\nTeacher's Raw Meeting Notes:\n${notes}\n\nGenerate the 3-sentence summary message.`;
+
+  try {
+    return await callClaude(systemPrompt, userPrompt, 300);
+  } catch (err) {
+    console.error('PTM Summary AI error:', err.message);
+    return `It was wonderful speaking with you about ${studentName}'s progress today! We discussed strategies to support their continued growth. Please reach out if you have any more questions.`;
+  }
+};
+
 module.exports = {
   generateStudentReport,
   generateLessonPlan,
@@ -289,4 +358,7 @@ module.exports = {
   chatStudentBuddy,
   generateMoodAlertMessage,
   generateTimeCapsuleNarrative,
+  generateSubBriefingSummary,
+  generatePTMTalkingPoints,
+  generatePTMPostSummary,
 };
